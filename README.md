@@ -58,8 +58,8 @@ rig-systems-engineering-studio/
 │   ├── render.py                  # YAML + Markdown emitters
 │   └── cards/                     # 3,087 generated YAML + MD pairs
 ├── cards-design/                  # Companion design cards (Mike authors)
-│   ├── triple-diamond-21-steps.md
-│   ├── bms-confidence-3-element.md
+│   ├── triple-diamond-21-steps.md        # ✅ Complete (v1, 2026-05-16)
+│   ├── bms-confidence-3-element.md       # 🟡 Stub
 │   ├── a1-python-only-deep-spec.md       # ✅ Complete
 │   ├── a2-hybrid-deep-spec.md            # 🟡 Stub
 │   ├── a3-agent-bounded-deep-spec.md     # 🟡 Stub
@@ -107,6 +107,8 @@ Archetype implementations live in a private companion repo.
 
 ## Status
 
-🟢 **P0 scaffold complete.** Generator runs, produces 3,087 placeholder cells.
-🟡 **P1 in progress.** Streamlit viewer scaffolded.
-⚪ **P2+ pending.** Awaiting card authoring.
+🟢 **P0 scaffold complete.** Generator runs, produces 3,087 cells. 6/6 tests passing.
+🟢 **P1 viewer scaffolded.** Streamlit + Plotly 3D viewer reads `viz/lattice_index.json`.
+🟢 **Y-axis content authored** (`triple-diamond-21-steps.md`). All 21 (diamond, step) semantics live in generated cards.
+🟡 **Z-axis content pending** (`bms-confidence-3-element.md`). Next to author.
+⚪ **A2/A3/A4 archetype deep-specs pending.** Author when each phase starts.

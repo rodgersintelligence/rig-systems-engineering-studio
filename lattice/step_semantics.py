@@ -1,100 +1,163 @@
 """Triple Diamond 21-step semantics (Y-axis source of truth).
 
-Each of the 21 (diamond, step) combinations gets a distinct semantic.
-This is the content layer Mike authors in cards-design/triple-diamond-21-steps.md.
-Stubs here are placeholders to be overwritten when the card is finalized.
+Each of the 21 (diamond, step) combinations is a distinct semantic.
+Source of truth: cards-design/triple-diamond-21-steps.md.
+Keep this file synchronized with the markdown card.
 """
 from __future__ import annotations
 
 from .build_card import Diamond, IQRSQPI
 
 STEP_SEMANTICS: dict[tuple[Diamond, IQRSQPI], dict[str, str]] = {
-    # D1 DISCOVERY — divergent, exploratory, opens the problem space
+    # --- D1 DISCOVERY --- divergent; open the problem space ----------------
     (Diamond.D1_DISCOVERY, IQRSQPI.INTENT): {
         "name": "Divergent Intent Capture",
-        "description": "STUB. Author in cards-design/triple-diamond-21-steps.md.",
+        "description": (
+            "Treat the incoming signal as a vector of possibilities, not a known intent. "
+            "Deterministic matchers are deliberately bypassed at D1."
+        ),
     },
     (Diamond.D1_DISCOVERY, IQRSQPI.QUESTION): {
         "name": "Open-Frame Questioning",
-        "description": "STUB.",
+        "description": (
+            "Generate the widest set of reasonable questions before any narrowing. "
+            "Each question must score >= +3 sigma on deviation from baseline framings."
+        ),
     },
     (Diamond.D1_DISCOVERY, IQRSQPI.RESEARCH): {
         "name": "Wide-Aperture Research",
-        "description": "STUB.",
+        "description": (
+            "Source diversity > depth. Pull from contrarian sources, edge-case datasets, "
+            "and deprecated frameworks. Source allowlist is intentionally permissive."
+        ),
     },
     (Diamond.D1_DISCOVERY, IQRSQPI.SOLUTION): {
         "name": "Possibility Sketching",
-        "description": "STUB.",
+        "description": (
+            "Generate 5-10 distinct solution shapes without committing to mechanism. "
+            "Each must be falsifiable but not yet mechanism-bound."
+        ),
     },
     (Diamond.D1_DISCOVERY, IQRSQPI.QUALITY): {
         "name": "Coverage Check",
-        "description": "STUB.",
+        "description": (
+            "Did we explore the actual problem space, or just the comfortable region? "
+            "Adversarial perspective sweep + anti-slop probing."
+        ),
     },
     (Diamond.D1_DISCOVERY, IQRSQPI.PROOF): {
         "name": "Exploration Receipt",
-        "description": "STUB.",
+        "description": (
+            "Audit-grade record of what was explored AND what was deliberately abandoned. "
+            "Future agents inherit your dead ends so they don't relitigate them."
+        ),
     },
     (Diamond.D1_DISCOVERY, IQRSQPI.INTEGRATE): {
         "name": "Frame Selection",
-        "description": "STUB.",
+        "description": (
+            "Narrow the SolutionField to 1-3 frames that carry forward into D2. "
+            "Human-in-loop at L5+; deterministic shortlist at L1-L3."
+        ),
     },
-    # D2 SOLUTION — converge, bind to mechanism, ship
+    # --- D2 SOLUTION --- converge; bind to mechanism; ship -----------------
     (Diamond.D2_SOLUTION, IQRSQPI.INTENT): {
         "name": "Mechanism-Bound Intent",
-        "description": "STUB.",
+        "description": (
+            "Convert each SelectedFrame into an intent with explicit mechanism. "
+            "No mechanism, no progress past this step."
+        ),
     },
     (Diamond.D2_SOLUTION, IQRSQPI.QUESTION): {
         "name": "Decomposed Sub-Questions",
-        "description": "STUB.",
+        "description": (
+            "Break the mechanism-bound intent into 3-7 sub-questions with a coverage "
+            "guarantee >= 0.85. Dependency-aware so research can parallelize."
+        ),
     },
     (Diamond.D2_SOLUTION, IQRSQPI.RESEARCH): {
         "name": "Source-Per-Claim Research",
-        "description": "STUB.",
+        "description": (
+            "Every claim that will appear in the solution must be backed by >=1 source. "
+            "Python wrapper enforces, never the prompt."
+        ),
     },
     (Diamond.D2_SOLUTION, IQRSQPI.SOLUTION): {
         "name": "Schema-Bound Synthesis",
-        "description": "STUB.",
+        "description": (
+            "Generate one solution that fully types against the contract. "
+            "Outlines + Pydantic + retry on schema fail."
+        ),
     },
     (Diamond.D2_SOLUTION, IQRSQPI.QUALITY): {
         "name": "Gate Stack Run",
-        "description": "STUB.",
+        "description": (
+            "Physics -> Cognitive -> Nature -> RIG-L composite. Short-circuit on any "
+            "hard failure; diagnostic payload returned, not raised."
+        ),
     },
     (Diamond.D2_SOLUTION, IQRSQPI.PROOF): {
         "name": "Falsification Charter",
-        "description": "STUB.",
+        "description": (
+            "Bind the solution to a written falsifier. How will we know we were wrong? "
+            "Generates Brier-trackable predictions."
+        ),
     },
     (Diamond.D2_SOLUTION, IQRSQPI.INTEGRATE): {
         "name": "Dispatch + Audit",
-        "description": "STUB.",
+        "description": (
+            "Risk-classified approval (conditional at A1/A2, mandatory at A3+) -> "
+            "execute -> write audit row tying ProofPacket -> Action -> Result."
+        ),
     },
-    # D3 EVOLUTION — measure drift, recalibrate, retire/rescore
+    # --- D3 EVOLUTION --- measure drift; recalibrate; cascade --------------
     (Diamond.D3_EVOLUTION, IQRSQPI.INTENT): {
         "name": "Drift-Triggered Intent",
-        "description": "STUB.",
+        "description": (
+            "A drift event (Brier > 0.15, rollback > 5%, or 90-day re-score) generates "
+            "an intent to investigate what changed in the cell's behavior."
+        ),
     },
     (Diamond.D3_EVOLUTION, IQRSQPI.QUESTION): {
         "name": "What Broke / Why Now",
-        "description": "STUB.",
+        "description": (
+            "Decompose the drift into testable failure-mode questions. Time-windowed "
+            "comparison to the cell's prior baseline (90d / 180d / 365d)."
+        ),
     },
     (Diamond.D3_EVOLUTION, IQRSQPI.RESEARCH): {
         "name": "Brier Score + Rollback Forensics",
-        "description": "STUB.",
+        "description": (
+            "Pull prediction history, rollback logs, and audit rows. Compute current "
+            "vs. baseline calibration."
+        ),
     },
     (Diamond.D3_EVOLUTION, IQRSQPI.SOLUTION): {
         "name": "Recalibration Patch",
-        "description": "STUB.",
+        "description": (
+            "Minimum-diff change to restore the cell to its target performance. "
+            "Could be a criterion override, a prior adjustment, or a mode demotion."
+        ),
     },
     (Diamond.D3_EVOLUTION, IQRSQPI.QUALITY): {
         "name": "Regression Check",
-        "description": "STUB.",
+        "description": (
+            "Replay the last 30 days of invocations against the patched cell. "
+            "Confirm Brier improves without breaking adjacent cells in the lattice."
+        ),
     },
     (Diamond.D3_EVOLUTION, IQRSQPI.PROOF): {
         "name": "Re-Score Receipt",
-        "description": "STUB.",
+        "description": (
+            "Append-only record of the score change. Includes prior values, patch "
+            "reason, trigger source, and proof of regression check."
+        ),
     },
     (Diamond.D3_EVOLUTION, IQRSQPI.INTEGRATE): {
         "name": "Cascade Update",
-        "description": "STUB.",
+        "description": (
+            "Propagate the score change to dependent cells (same altitude, same step, "
+            "related diamonds). Regenerate downstream cards and refresh the 3D viz."
+        ),
     },
 }
 
