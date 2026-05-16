@@ -68,7 +68,7 @@ export default function App() {
 function LoadingScreen() {
   return (
     <div style={center}>
-      <div>Loading 3,087 cells…</div>
+      <div>Loading 588 cells…</div>
     </div>
   );
 }

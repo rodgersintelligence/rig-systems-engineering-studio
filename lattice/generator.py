@@ -26,8 +26,14 @@ from .score import coordinate_bms, threshold_for, confidence_band_for
 from .step_semantics import STEP_SEMANTICS
 
 # Which modes have a working implementation in the private repo today.
-IMPLEMENTED_MODES = {BuildMode.A1_PYTHON_ONLY, BuildMode.A2_HYBRID}
-SPEC_AUTHORED_MODES = {BuildMode.A3_AGENT_BOUNDED, BuildMode.A4_LLM_AGENT_FREE}
+# All 4 archetypes shipped 2026-05-16 with 70/70 tests passing.
+IMPLEMENTED_MODES = {
+    BuildMode.A1_PYTHON_ONLY,
+    BuildMode.A2_HYBRID,
+    BuildMode.A3_AGENT_BOUNDED,
+    BuildMode.A4_LLM_AGENT_FREE,
+}
+SPEC_AUTHORED_MODES: set[BuildMode] = set()
 
 STACK_BY_MODE = {
     BuildMode.A1_PYTHON_ONLY: [

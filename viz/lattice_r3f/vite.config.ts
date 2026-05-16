@@ -10,6 +10,8 @@ const base = process.env.GITHUB_PAGES === 'true'
 export default defineConfig({
   plugins: [react()],
   base,
+  // App uses plain CSS via Three.js — bypass parent postcss.config.mjs auto-discovery
+  css: { postcss: {} },
   build: {
     outDir: 'dist',
     sourcemap: false,

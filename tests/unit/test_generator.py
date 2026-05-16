@@ -52,14 +52,11 @@ def test_archetype_naming() -> None:
         assert 1 <= int(parts[1]) <= 7
 
 
-def test_implementation_status_split() -> None:
+def test_implementation_status_all_implemented() -> None:
+    """All 4 archetypes (A1/A2/A3/A4) ship in the private repo as of 2026-05-16."""
     cards = generate_all()
     impl = sum(1 for c in cards if c.implementation_status == ImplementationStatus.IMPLEMENTED)
-    spec = sum(1 for c in cards if c.implementation_status == ImplementationStatus.SPEC_AUTHORED)
-    # A1+A2 = implemented (2 modes x 3 diamonds x 7 altitudes x 7 steps = 294)
-    # A3+A4 = spec_authored (294)
-    assert impl == 294
-    assert spec == 294
+    assert impl == 588
 
 
 def test_question_bank_populated() -> None:
