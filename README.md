@@ -57,13 +57,13 @@ rig-systems-engineering-studio/
 │   ├── generator.py               # 3,087-cell deterministic generator
 │   ├── render.py                  # YAML + Markdown emitters
 │   └── cards/                     # 3,087 generated YAML + MD pairs
-├── cards-design/                  # Companion design cards (Mike authors)
+├── cards-design/                  # Companion design cards — all authored
 │   ├── triple-diamond-21-steps.md        # ✅ Complete (v1, 2026-05-16)
 │   ├── bms-confidence-3-element.md       # ✅ Complete (v1, 2026-05-16)
 │   ├── a1-python-only-deep-spec.md       # ✅ Complete
-│   ├── a2-hybrid-deep-spec.md            # 🟡 Stub
-│   ├── a3-agent-bounded-deep-spec.md     # 🟡 Stub
-│   └── a4-llm-agent-free-deep-spec.md    # 🟡 Stub
+│   ├── a2-hybrid-deep-spec.md            # ✅ Complete (v1, 2026-05-16)
+│   ├── a3-agent-bounded-deep-spec.md     # ✅ Complete (v1, 2026-05-16)
+│   └── a4-llm-agent-free-deep-spec.md    # ✅ Complete (v1, 2026-05-16)
 ├── viz/
 │   ├── streamlit_plotly_app.py    # 3D viewer
 │   ├── lattice_index.json         # Single source of truth for all viz
@@ -114,4 +114,5 @@ Archetype implementations live in a private companion repo.
 🟢 **DV + prediction engines wired.** 40-engine DV adapter + MiroFish/MiroShark/MilkyWay. 30-question banks per cell.
 🟢 **A1 archetype shipped** to [rig-systems-engineering-private](https://github.com/rodgersintelligence/rig-systems-engineering-private) — 7 step files, diamond-aware, 9/9 tests passing.
 🟢 **R3F web viewer scaffolded.** Vite + React + Three.js + GitHub Pages CI. See [`docs/viz-design.md`](docs/viz-design.md) for the multi-view design.
-⚪ **A2/A3/A4 archetype deep-specs pending.** Author when each phase starts.
+🟢 **All 6 design cards authored.** Triple Diamond (Y), BMS Confidence (Z), A1/A2/A3/A4 deep specs. Implementation can start on any archetype.
+⚪ **A2/A3/A4 archetype IMPLEMENTATIONS pending.** Specs are ready; code goes into the private repo when each phase begins.
