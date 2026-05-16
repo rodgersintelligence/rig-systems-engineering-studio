@@ -1,0 +1,49 @@
+name: Generate lattice + verify
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lattice/**"
+      - "cards-design/**"
+  pull_request:
+    paths:
+      - "lattice/**"
+      - "cards-design/**"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -e ".[viz,yaml]"
+
+      - name: Validate generator (in-memory)
+        run: python -m lattice.generator --validate
+
+      - name: Generate all 3,087 cards
+        run: python -m lattice.generator
+
+      - name: Assert card count
+        run: |
+          count=$(ls lattice/cards/*.yaml | wc -l)
+          if [ "$count" -ne 3087 ]; then
+            echo "::error::Expected 3,087 YAML cards, found $count"
+            exit 1
+          fi
+          echo "✅ 3,087 cards generated"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lattice-cards
+          path: |
+            lattice/cards/
+            viz/lattice_index.json
+          retention-days: 30
