@@ -16,7 +16,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(INDEX_URL)
+    // Cache-bust by deploy time so users see the latest lattice on redeploys.
+    const url = `${INDEX_URL}?v=${(import.meta as any).env?.VITE_BUILD_ID ?? Date.now()}`;
+    fetch(url, { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();

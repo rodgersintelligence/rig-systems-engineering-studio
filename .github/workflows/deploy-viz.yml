@@ -52,6 +52,7 @@ jobs:
         working-directory: viz/lattice_r3f
         env:
           GITHUB_PAGES: "true"
+          VITE_BUILD_ID: ${{ github.sha }}
         run: npm run build
 
       - uses: actions/configure-pages@v5
