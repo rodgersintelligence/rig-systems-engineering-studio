@@ -35,6 +35,7 @@ jobs:
       - name: Generate lattice_index.json
         run: |
           python -m lattice.generator
+          mkdir -p viz/lattice_r3f/public
           cp viz/lattice_index.json viz/lattice_r3f/public/lattice_index.json
 
       - uses: actions/setup-node@v4
