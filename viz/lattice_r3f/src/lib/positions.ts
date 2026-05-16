@@ -1,8 +1,8 @@
 import { DIAMOND_ORDER, LatticeCell, MODE_ORDER, STEP_ORDER } from '../types/lattice';
 
-const stepIdx = new Map(STEP_ORDER.map((s, i) => [s, i]));
-const diamondIdx = new Map(DIAMOND_ORDER.map((d, i) => [d, i]));
-const modeIdx = new Map(MODE_ORDER.map((m, i) => [m, i]));
+const stepIdx = new Map<string, number>(STEP_ORDER.map((s, i) => [s, i]));
+const diamondIdx = new Map<string, number>(DIAMOND_ORDER.map((d, i) => [d, i]));
+const modeIdx = new Map<string, number>(MODE_ORDER.map((m, i) => [m, i]));
 
 /** Map a cell to (x, y, z) grid coordinates.
  *
