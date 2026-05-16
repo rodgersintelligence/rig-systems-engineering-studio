@@ -59,7 +59,7 @@ rig-systems-engineering-studio/
 │   └── cards/                     # 3,087 generated YAML + MD pairs
 ├── cards-design/                  # Companion design cards (Mike authors)
 │   ├── triple-diamond-21-steps.md        # ✅ Complete (v1, 2026-05-16)
-│   ├── bms-confidence-3-element.md       # 🟡 Stub
+│   ├── bms-confidence-3-element.md       # ✅ Complete (v1, 2026-05-16)
 │   ├── a1-python-only-deep-spec.md       # ✅ Complete
 │   ├── a2-hybrid-deep-spec.md            # 🟡 Stub
 │   ├── a3-agent-bounded-deep-spec.md     # 🟡 Stub
@@ -108,7 +108,10 @@ Archetype implementations live in a private companion repo.
 ## Status
 
 🟢 **P0 scaffold complete.** Generator runs, produces 3,087 cells. 6/6 tests passing.
-🟢 **P1 viewer scaffolded.** Streamlit + Plotly 3D viewer reads `viz/lattice_index.json`.
-🟢 **Y-axis content authored** (`triple-diamond-21-steps.md`). All 21 (diamond, step) semantics live in generated cards.
-🟡 **Z-axis content pending** (`bms-confidence-3-element.md`). Next to author.
+🟢 **P1 Streamlit viewer.** Plotly 3D scatter reads `viz/lattice_index.json`.
+🟢 **Y-axis content authored** (`triple-diamond-21-steps.md`). 21 (diamond, step) semantics live in generated cards.
+🟢 **Z-axis content authored** (`bms-confidence-3-element.md`). 21 (confidence, step) semantics live.
+🟢 **DV + prediction engines wired.** 40-engine DV adapter + MiroFish/MiroShark/MilkyWay. 30-question banks per cell.
+🟢 **A1 archetype shipped** to [rig-systems-engineering-private](https://github.com/rodgersintelligence/rig-systems-engineering-private) — 7 step files, diamond-aware, 9/9 tests passing.
+🟢 **R3F web viewer scaffolded.** Vite + React + Three.js + GitHub Pages CI. See [`docs/viz-design.md`](docs/viz-design.md) for the multi-view design.
 ⚪ **A2/A3/A4 archetype deep-specs pending.** Author when each phase starts.

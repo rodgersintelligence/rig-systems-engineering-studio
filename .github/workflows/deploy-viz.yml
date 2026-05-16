@@ -1,0 +1,70 @@
+name: Deploy R3F viewer to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "viz/lattice_r3f/**"
+      - "lattice/**"
+      - "cards-design/**"
+      - ".github/workflows/deploy-viz.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lattice
+        run: pip install -e ".[yaml]"
+
+      - name: Generate lattice_index.json
+        run: |
+          python -m lattice.generator
+          cp viz/lattice_index.json viz/lattice_r3f/public/lattice_index.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: viz/lattice_r3f/package-lock.json
+
+      - name: Install npm deps
+        working-directory: viz/lattice_r3f
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        working-directory: viz/lattice_r3f
+        env:
+          GITHUB_PAGES: "true"
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: viz/lattice_r3f/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
