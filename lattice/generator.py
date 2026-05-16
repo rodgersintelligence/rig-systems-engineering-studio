@@ -16,9 +16,12 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from .build_card import (
-    Altitude, BuildCard, ConfidenceElement, Diamond, IQRSQPI, BuildMode,
+    Altitude, BuildCard, ConfidenceElement, Diamond, EngineRefs, IQRSQPI, BuildMode,
 )
 from .confidence_elements import CONFIDENCE_SEMANTICS
+from .integrations import dv_engines
+from .integrations.predictions import MIRO_FISH_CRITERIA
+from .question_bank import bank_for_cell
 from .score import (
     ALT_INDEX, compute_bms, mode_from_bms, score_criteria,
 )
@@ -65,6 +68,14 @@ def score_cell(
     sem_y = STEP_SEMANTICS[(diamond_y, step_y)]
     sem_z = CONFIDENCE_SEMANTICS[(confidence_element_z, step_z)]
 
+    # Engine refs: DV at Research, prediction engines at Quality.
+    refs = EngineRefs(diamond_sigma_target=dv_engines.rung_for_diamond(diamond_y))
+    if step_y == IQRSQPI.RESEARCH:
+        refs.dv_research = dv_engines.research_engines()
+    if step_y == IQRSQPI.QUALITY:
+        refs.dv_quality_gates = dv_engines.quality_gates()
+        refs.predictions = ["mirofish:" + c for c in MIRO_FISH_CRITERIA] + ["miroshark", "milkyway"]
+
     return BuildCard(
         cell_id=cell_id,
         altitude=altitude,
@@ -86,6 +97,8 @@ def score_cell(
         gates=GATES_BY_ALTITUDE[altitude],
         audit_path=f"phronema://audit/{altitude.value}/{cell_id}/",
         next_rescore=(date.today() + timedelta(days=90)).isoformat(),
+        question_bank=bank_for_cell(diamond_y, step_y),
+        engine_refs=refs,
     )
 
 

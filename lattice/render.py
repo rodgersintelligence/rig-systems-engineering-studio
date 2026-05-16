@@ -57,6 +57,19 @@ This cell's Z-axis confidence contribution: `{card.confidence_element_z.value} =
 ## Audit
 `{card.audit_path}`
 
+## Engines wired
+
+- **Diamond sigma target**: `{card.engine_refs.diamond_sigma_target}` (D1=+30, D2=+5, D3=0)
+- **DV Research engines**: {", ".join("`" + e + "`" for e in card.engine_refs.dv_research) or "_(only fires at Research step)_"}
+- **DV Quality gates (physics)**: {", ".join("`" + e + "`" for e in card.engine_refs.dv_quality_gates) or "_(only fires at Quality step)_"}
+- **Prediction engines**: {", ".join("`" + p + "`" for p in card.engine_refs.predictions) or "_(only fires at Quality step)_"}
+
+## Question bank ({len(card.question_bank)} entries)
+
+{chr(10).join(f"- **`{q.id}`** [{q.severity}] {q.text} _pass:_ `{q.pass_condition}`" for q in card.question_bank[:10])}
+
+_+{max(0, len(card.question_bank) - 10)} more — full bank in YAML._
+
 ## Governance
 - Next re-score: `{card.next_rescore}`
 - Recalibration cron: `{card.recalibration_cron}`

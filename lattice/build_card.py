@@ -68,6 +68,32 @@ class Example(BaseModel):
     gates_fired: list[str]
 
 
+class Question(BaseModel):
+    """One question/criterion in a cell's bank of 30.
+
+    Each Y-cell (21 diamond x step positions) owns ~30 canned questions.
+    The runtime evaluates them at each Z-axis confidence element.
+    """
+
+    id: str                          # e.g., "D2.S.Q07"
+    kind: Literal["question", "criterion"]
+    text: str
+    pass_condition: str              # how to determine pass/fail
+    severity: Literal["blocker", "warning", "info"] = "warning"
+
+
+class EngineRefs(BaseModel):
+    """Which DV + prediction engines fire at this step.
+
+    Populated from lattice/integrations/dv_engines.py + predictions.py.
+    """
+
+    dv_research: list[str] = []          # DV engines that push research outward
+    dv_quality_gates: list[str] = []     # DV physics gates that hard-block
+    predictions: list[str] = []          # MiroFish / MiroShark / MilkyWay
+    diamond_sigma_target: int | None = None  # +30 for D1, +5 for D2, 0 for D3
+
+
 class BuildCard(BaseModel):
     """One cell in the 7 x 21 x 21 lattice.
 
@@ -108,6 +134,13 @@ class BuildCard(BaseModel):
     audit_path: str = ""
 
     examples: list[Example] = []
+
+    question_bank: list[Question] = Field(
+        default_factory=list,
+        description="~30 canned questions/criteria for this Y-cell. "
+                    "Same 30 appear on every Z-slice; Z determines evaluation lens.",
+    )
+    engine_refs: EngineRefs = Field(default_factory=EngineRefs)
 
     next_rescore: str = ""
     recalibration_cron: str = "weekly"
