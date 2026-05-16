@@ -126,9 +126,9 @@ D3_PATTERN: list[tuple[str, str, str, str]] = [
 ]
 
 PATTERNS: dict[Diamond, list[tuple[str, str, str, str]]] = {
-    Diamond.D1_DISCOVERY: D1_PATTERN,
-    Diamond.D2_SOLUTION: D2_PATTERN,
-    Diamond.D3_EVOLUTION: D3_PATTERN,
+    Diamond.D1: D1_PATTERN,
+    Diamond.D2: D2_PATTERN,
+    Diamond.D3: D3_PATTERN,
 }
 
 

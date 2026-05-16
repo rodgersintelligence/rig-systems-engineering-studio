@@ -1,18 +1,23 @@
-import { CONFIDENCE_ORDER, DIAMOND_ORDER, LatticeCell, STEP_ORDER } from '../types/lattice';
+import { DIAMOND_ORDER, LatticeCell, MODE_ORDER, STEP_ORDER } from '../types/lattice';
 
 const stepIdx = new Map(STEP_ORDER.map((s, i) => [s, i]));
 const diamondIdx = new Map(DIAMOND_ORDER.map((d, i) => [d, i]));
-const confIdx = new Map(CONFIDENCE_ORDER.map((c, i) => [c, i]));
+const modeIdx = new Map(MODE_ORDER.map((m, i) => [m, i]));
 
-/** Map a cell to (x, y, z) grid coordinates in [0..6, 0..20, 0..20]. */
+/** Map a cell to (x, y, z) grid coordinates.
+ *
+ * X = altitude_index           (0..6,  7 wide)
+ * Y = diamond * 7 + step       (0..20, 21 tall)
+ * Z = mode_index               (0..3,  4 deep)
+ */
 export function cellGridPosition(cell: LatticeCell): [number, number, number] {
   const x = cell.altitude_index;
-  const y = (diamondIdx.get(cell.diamond_y) ?? 0) * 7 + (stepIdx.get(cell.step_y) ?? 0);
-  const z = (confIdx.get(cell.confidence_element_z) ?? 0) * 7 + (stepIdx.get(cell.step_z) ?? 0);
+  const y = (diamondIdx.get(cell.diamond) ?? 0) * 7 + (stepIdx.get(cell.step) ?? 0);
+  const z = modeIdx.get(cell.mode) ?? 0;
   return [x, y, z];
 }
 
 /** Center the grid roughly at origin so OrbitControls feel natural. */
 export function gridCenter(): [number, number, number] {
-  return [3, 10, 10];
+  return [3, 10, 1.5];
 }

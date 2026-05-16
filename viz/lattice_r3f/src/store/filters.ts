@@ -1,38 +1,52 @@
 import { create } from 'zustand';
 import {
-  ALTITUDE_ORDER, CONFIDENCE_ORDER, DIAMOND_ORDER, LatticeCell, MODE_COLORS, Mode,
+  ALTITUDE_ORDER, DIAMOND_ORDER, IMPL_COLORS, ImplStatus, LatticeCell,
+  MODE_COLORS, MODE_ORDER, Mode, STEP_ORDER,
 } from '../types/lattice';
 
 interface FilterState {
   modes: Set<Mode>;
   altitudes: Set<string>;
   diamonds: Set<string>;
-  confidence: Set<string>;
+  steps: Set<string>;
+  implStatuses: Set<ImplStatus>;
   bmsRange: [number, number];
+
+  // Visual modes
+  coverageMode: boolean;          // when true, color = implementation_status not mode
   selectedCellId: string | null;
 
   toggleMode: (m: Mode) => void;
   toggleAltitude: (a: string) => void;
   toggleDiamond: (d: string) => void;
-  toggleConfidence: (c: string) => void;
+  toggleStep: (s: string) => void;
+  toggleImpl: (s: ImplStatus) => void;
   setBmsRange: (r: [number, number]) => void;
+  setCoverageMode: (on: boolean) => void;
   selectCell: (id: string | null) => void;
   reset: () => void;
 
   isCellVisible: (cell: LatticeCell) => boolean;
+  colorFor: (cell: LatticeCell) => string;
 }
 
-const allModes = new Set(Object.keys(MODE_COLORS) as Mode[]);
-const allAltitudes = new Set(ALTITUDE_ORDER);
-const allDiamonds = new Set(DIAMOND_ORDER);
-const allConfidence = new Set(CONFIDENCE_ORDER);
+const allModes = new Set<Mode>(MODE_ORDER);
+const allAltitudes = new Set<string>(ALTITUDE_ORDER);
+const allDiamonds = new Set<string>(DIAMOND_ORDER);
+const allSteps = new Set<string>(STEP_ORDER);
+const allImpls = new Set<ImplStatus>(
+  ['implemented', 'spec_authored', 'planned', 'not_started']
+);
 
 export const useFilters = create<FilterState>((set, get) => ({
   modes: new Set(allModes),
   altitudes: new Set(allAltitudes),
   diamonds: new Set(allDiamonds),
-  confidence: new Set(allConfidence),
+  steps: new Set(allSteps),
+  implStatuses: new Set(allImpls),
   bmsRange: [0, 1],
+
+  coverageMode: false,
   selectedCellId: null,
 
   toggleMode: (m) => set((s) => {
@@ -50,28 +64,43 @@ export const useFilters = create<FilterState>((set, get) => ({
     next.has(d) ? next.delete(d) : next.add(d);
     return { diamonds: next };
   }),
-  toggleConfidence: (c) => set((s) => {
-    const next = new Set(s.confidence);
-    next.has(c) ? next.delete(c) : next.add(c);
-    return { confidence: next };
+  toggleStep: (st) => set((s) => {
+    const next = new Set(s.steps);
+    next.has(st) ? next.delete(st) : next.add(st);
+    return { steps: next };
+  }),
+  toggleImpl: (i) => set((s) => {
+    const next = new Set(s.implStatuses);
+    next.has(i) ? next.delete(i) : next.add(i);
+    return { implStatuses: next };
   }),
   setBmsRange: (bmsRange) => set({ bmsRange }),
+  setCoverageMode: (coverageMode) => set({ coverageMode }),
   selectCell: (selectedCellId) => set({ selectedCellId }),
   reset: () => set({
     modes: new Set(allModes),
     altitudes: new Set(allAltitudes),
     diamonds: new Set(allDiamonds),
-    confidence: new Set(allConfidence),
+    steps: new Set(allSteps),
+    implStatuses: new Set(allImpls),
     bmsRange: [0, 1],
+    coverageMode: false,
     selectedCellId: null,
   }),
 
   isCellVisible: (cell) => {
     const s = get();
-    return s.modes.has(cell.mode as Mode)
+    return s.modes.has(cell.mode)
       && s.altitudes.has(cell.altitude)
-      && s.diamonds.has(cell.diamond_y)
-      && s.confidence.has(cell.confidence_element_z)
-      && cell.bms >= s.bmsRange[0] && cell.bms <= s.bmsRange[1];
+      && s.diamonds.has(cell.diamond)
+      && s.steps.has(cell.step)
+      && s.implStatuses.has(cell.implementation_status)
+      && cell.bms_score >= s.bmsRange[0] && cell.bms_score <= s.bmsRange[1];
+  },
+
+  colorFor: (cell) => {
+    const s = get();
+    if (s.coverageMode) return IMPL_COLORS[cell.implementation_status];
+    return MODE_COLORS[cell.mode];
   },
 }));

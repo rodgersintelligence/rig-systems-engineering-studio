@@ -126,7 +126,7 @@ def predictive_swarm(
     seed: str,
     horizon: str = "30d",
     persona: dict[str, Any] | None = None,
-    diamond: Diamond = Diamond.D2_SOLUTION,
+    diamond: Diamond = Diamond.D2,
 ) -> dict[str, Any]:
     """Run the full predictive challenge layer.
 
@@ -147,9 +147,9 @@ def _synthesize(seed: str, diamond: Diamond) -> dict[str, Any]:
     """Diamond-aware synthesis stub. D1 reports diversity, D2 reports confidence,
     D3 reports drift vs baseline."""
     base = {"diamond": diamond.value}
-    if diamond == Diamond.D1_DISCOVERY:
+    if diamond == Diamond.D1:
         base["focus"] = "diversity_across_candidates"
-    elif diamond == Diamond.D2_SOLUTION:
+    elif diamond == Diamond.D2:
         base["focus"] = "single_solution_confidence"
     else:
         base["focus"] = "drift_vs_baseline"

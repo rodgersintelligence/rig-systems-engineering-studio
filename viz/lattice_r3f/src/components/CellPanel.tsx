@@ -1,9 +1,16 @@
-import { LatticeCell, MODE_COLORS, Mode } from '../types/lattice';
+import { IMPL_COLORS, LatticeCell, MODE_COLORS, MODE_LONG_NAMES } from '../types/lattice';
 import { useFilters } from '../store/filters';
 
 interface Props {
   cells: LatticeCell[];
 }
+
+const IMPL_EMOJI: Record<string, string> = {
+  implemented: '✅',
+  spec_authored: '📋',
+  planned: '🟡',
+  not_started: '⚪',
+};
 
 export function CellPanel({ cells }: Props) {
   const selectedId = useFilters((s) => s.selectedCellId);
@@ -13,38 +20,47 @@ export function CellPanel({ cells }: Props) {
   const cell = cells.find((c) => c.cell_id === selectedId);
   if (!cell) return null;
 
-  const accent = MODE_COLORS[cell.mode as Mode];
+  const modeColor = MODE_COLORS[cell.mode];
+  const implColor = IMPL_COLORS[cell.implementation_status];
 
   return (
     <div style={panel}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Cell
           </div>
-          <div style={{ fontSize: 18, fontWeight: 600, fontFamily: 'monospace', marginTop: 2 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, fontFamily: 'monospace', marginTop: 2 }}>
             {cell.cell_id}
+          </div>
+          <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace', marginTop: 1 }}>
+            {cell.coordinate_id} · {cell.step}
           </div>
         </div>
         <button onClick={() => selectCell(null)} style={closeBtn}>×</button>
       </div>
 
-      <div style={{ marginTop: 14, padding: '6px 10px', background: accent, color: '#0a0a0a', borderRadius: 4, fontSize: 12, fontWeight: 600, display: 'inline-block' }}>
-        {cell.mode}  ·  BMS {cell.bms.toFixed(3)}
+      <div style={{ marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <Pill color={modeColor}>
+          {cell.mode} {MODE_LONG_NAMES[cell.mode]} · BMS {cell.bms_score.toFixed(3)}
+        </Pill>
+        <Pill color={implColor}>
+          {IMPL_EMOJI[cell.implementation_status]} {cell.implementation_status.replace('_', ' ')}
+        </Pill>
       </div>
 
-      <Row label="X / Altitude" value={cell.altitude} />
-      <Row label="Y / Diamond.Step" value={`${cell.diamond_y}.${cell.step_y}`} />
-      <Row label="Z / Confidence.Step" value={`${cell.confidence_element_z}.${cell.step_z}`} />
-      <Row label="Z contribution" value={cell.contribution.toFixed(4)} />
+      <Row label="Archetype" value={cell.archetype} />
+      <Row label="Altitude × Diamond × Step" value={`${cell.altitude} × ${cell.diamond} × ${cell.step}`} />
+      <Row label="Confidence band" value={cell.confidence_band} />
+      <Row label="Diamond × Step semantic" value={cell.diamond_step_semantic} small />
 
-      <div style={{ marginTop: 16, fontSize: 11, color: '#94a3b8' }}>
+      <div style={{ marginTop: 14, fontSize: 11, color: '#94a3b8' }}>
         Open the full BuildCard:{' '}
         <a
           href={`https://github.com/rodgersintelligence/rig-systems-engineering-studio/blob/main/lattice/cards/${cell.cell_id}.md`}
           target="_blank"
           rel="noreferrer"
-          style={{ color: accent }}
+          style={{ color: modeColor }}
         >
           /lattice/cards/{cell.cell_id}.md
         </a>
@@ -53,11 +69,19 @@ export function CellPanel({ cells }: Props) {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Pill({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginTop: 10, fontSize: 12 }}>
+    <div style={{ padding: '4px 9px', background: color, color: '#0a0a0a', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+      {children}
+    </div>
+  );
+}
+
+function Row({ label, value, small }: { label: string; value: string; small?: boolean }) {
+  return (
+    <div style={{ marginTop: 10, fontSize: small ? 11 : 12 }}>
       <div style={{ color: '#94a3b8', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ color: '#e5e5e5', fontFamily: 'monospace' }}>{value}</div>
+      <div style={{ color: '#e5e5e5', fontFamily: small ? 'inherit' : 'monospace', lineHeight: 1.4 }}>{value}</div>
     </div>
   );
 }
@@ -66,7 +90,7 @@ const panel: React.CSSProperties = {
   position: 'absolute',
   top: 16,
   right: 16,
-  width: 320,
+  width: 340,
   padding: 16,
   background: 'rgba(15, 23, 42, 0.92)',
   border: '1px solid #1e293b',

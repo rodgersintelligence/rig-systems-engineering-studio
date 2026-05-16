@@ -1,10 +1,15 @@
-"""Pydantic schema for the RIG lattice Build Card.
+"""Pydantic schema for the corrected RIG Lattice Build Card.
 
-One Build Card per cell. 3,087 cells total. Schema frozen at v1.
+Geometry (corrected 2026-05-16):
+    7 altitudes x 3 diamonds x 4 BMS modes = 84 primary coordinates
+    84 coordinates x 7 IQRSQPI steps = 588 process-expanded execution cells
+    4 modes x 7 steps = 28 reusable implementation archetypes
+
+Schema frozen at v0.2.0.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
 
@@ -12,19 +17,37 @@ from pydantic import BaseModel, Field
 
 
 class Altitude(str, Enum):
-    L1_ARTIFACTS = "L1"
-    L2_TASKS = "L2"
-    L3_WORKFLOWS = "L3"
-    L4_SYSTEMS = "L4"
-    L5_PROGRAMS = "L5"
-    L6_STRATEGY = "L6"
-    L7_VISION = "L7"
+    L1 = "L1"
+    L2 = "L2"
+    L3 = "L3"
+    L4 = "L4"
+    L5 = "L5"
+    L6 = "L6"
+    L7 = "L7"
+
+
+ALTITUDE_NAMES = {
+    Altitude.L1: "Artifacts",
+    Altitude.L2: "Tasks",
+    Altitude.L3: "Workflows",
+    Altitude.L4: "Systems",
+    Altitude.L5: "Programs",
+    Altitude.L6: "Strategy",
+    Altitude.L7: "Vision",
+}
 
 
 class Diamond(str, Enum):
-    D1_DISCOVERY = "D1"
-    D2_SOLUTION = "D2"
-    D3_EVOLUTION = "D3"
+    D1 = "D1"  # Discovery / Physical
+    D2 = "D2"  # Solution / Cognitive
+    D3 = "D3"  # Evolution / Nature
+
+
+DIAMOND_NAMES = {
+    Diamond.D1: "Discovery",
+    Diamond.D2: "Solution",
+    Diamond.D3: "Evolution",
+}
 
 
 class IQRSQPI(str, Enum):
@@ -37,147 +60,137 @@ class IQRSQPI(str, Enum):
     INTEGRATE = "I2"
 
 
-class ConfidenceElement(str, Enum):
-    """The 3 mathematical contributors to BMS."""
-
-    RAW = "RAW"
-    ADJ_FAILURE = "ADJ_FAILURE"
-    ADJ_VOLUME = "ADJ_VOLUME"
+STEP_NAMES = {
+    IQRSQPI.INTENT: "Intent",
+    IQRSQPI.QUESTION: "Question",
+    IQRSQPI.RESEARCH: "Research",
+    IQRSQPI.SOLUTION: "Solution",
+    IQRSQPI.QUALITY: "Quality",
+    IQRSQPI.PROOF: "Proof",
+    IQRSQPI.INTEGRATE: "Integrate",
+}
 
 
 class BuildMode(str, Enum):
-    PYTHON_ONLY = "PYTHON_ONLY"
-    HYBRID = "HYBRID"
-    AGENT_BOUNDED = "AGENT_BOUNDED"
-    LLM_AGENT_FREE = "LLM_AGENT_FREE"
+    """BMS-driven mode. Drives the Z-axis directly."""
+
+    A1_PYTHON_ONLY = "A1"
+    A2_HYBRID = "A2"
+    A3_AGENT_BOUNDED = "A3"
+    A4_LLM_AGENT_FREE = "A4"
 
 
-class ProcessStep(BaseModel):
-    order: int
-    name: str
-    mode: Literal["PY", "LLM", "HUMAN"]
-    tool: str
-    notes: str = ""
+MODE_LONG_NAMES = {
+    BuildMode.A1_PYTHON_ONLY: "PYTHON_ONLY",
+    BuildMode.A2_HYBRID: "HYBRID",
+    BuildMode.A3_AGENT_BOUNDED: "AGENT_BOUNDED",
+    BuildMode.A4_LLM_AGENT_FREE: "LLM_AGENT_FREE",
+}
+
+MODE_BMS_REP = {
+    BuildMode.A1_PYTHON_ONLY: 0.90,
+    BuildMode.A2_HYBRID: 0.60,
+    BuildMode.A3_AGENT_BOUNDED: 0.35,
+    BuildMode.A4_LLM_AGENT_FREE: 0.18,
+}
+
+MODE_THRESHOLDS = {
+    BuildMode.A1_PYTHON_ONLY: ">=0.75",
+    BuildMode.A2_HYBRID: "0.45-0.74",
+    BuildMode.A3_AGENT_BOUNDED: "0.25-0.44",
+    BuildMode.A4_LLM_AGENT_FREE: "<0.25",
+}
+
+MODE_COST_BANDS = {
+    BuildMode.A1_PYTHON_ONLY: "$0-$0.001",
+    BuildMode.A2_HYBRID: "$0.01-$0.30",
+    BuildMode.A3_AGENT_BOUNDED: "$0.30-$1.00",
+    BuildMode.A4_LLM_AGENT_FREE: "$1-$50 + 4h wall clock",
+}
 
 
-class Example(BaseModel):
-    name: str
-    inputs: dict[str, Any]
-    flow: list[str]
-    output: str
-    gates_fired: list[str]
+class ImplementationStatus(str, Enum):
+    """Where this cell's archetype implementation stands."""
+
+    IMPLEMENTED = "implemented"           # working code shipped to private repo
+    SPEC_AUTHORED = "spec_authored"       # deep-spec exists; code not built
+    PLANNED = "planned"                   # in roadmap but not specced
+    NOT_STARTED = "not_started"
 
 
 class Question(BaseModel):
-    """One question/criterion in a cell's bank of 30.
+    """One question/criterion in a cell's bank (~30 per cell)."""
 
-    Each Y-cell (21 diamond x step positions) owns ~30 canned questions.
-    The runtime evaluates them at each Z-axis confidence element.
-    """
-
-    id: str                          # e.g., "D2.S.Q07"
+    id: str
     kind: Literal["question", "criterion"]
     text: str
-    pass_condition: str              # how to determine pass/fail
+    pass_condition: str
     severity: Literal["blocker", "warning", "info"] = "warning"
 
 
 class EngineRefs(BaseModel):
-    """Which DV + prediction engines fire at this step.
+    """DV + prediction engines wired into this cell."""
 
-    Populated from lattice/integrations/dv_engines.py + predictions.py.
-    """
-
-    dv_research: list[str] = []          # DV engines that push research outward
-    dv_quality_gates: list[str] = []     # DV physics gates that hard-block
-    predictions: list[str] = []          # MiroFish / MiroShark / MilkyWay
-    diamond_sigma_target: int | None = None  # +30 for D1, +5 for D2, 0 for D3
+    dv_research: list[str] = []
+    dv_quality_gates: list[str] = []
+    predictions: list[str] = []
+    diamond_sigma_target: int | None = None
 
 
 class BuildCard(BaseModel):
-    """One cell in the 7 x 21 x 21 lattice.
+    """One execution cell in the 84 x 7 = 588-cell process-expanded lattice.
 
-    cell_id format: <altitude>-<diamond>.<step_y>-<conf_element>.<step_z>
-    Example: L4-D2.S-ADJ_FAILURE.Q2
+    cell_id format: L<n>-D<n>-A<n>-<STEP>
+    Example: L4-D2-A2-S
     """
 
     cell_id: str
+
+    # Position
     altitude: Altitude
-    diamond_y: Diamond
-    step_y: IQRSQPI
-    confidence_element_z: ConfidenceElement
-    step_z: IQRSQPI
-
-    scores: dict[str, int] = Field(description="C1..C20, each 0-5")
-    raw: float
-    adj_failure: float
-    adj_volume: float
-    adj_altitude: float
-    bms: float
+    diamond: Diamond
     mode: BuildMode
+    step: IQRSQPI
 
-    confidence_contribution: float = Field(
-        description="The Z-element's specific contribution to BMS at step_z"
-    )
+    # Coordinate-level identity (84 unique)
+    coordinate_id: str  # L<n>-D<n>-A<n>
 
-    diamond_step_semantic: str = Field(
-        description="Y-axis semantic: what (diamond, step_y) means"
-    )
-    confidence_step_semantic: str = Field(
-        description="Z-axis semantic: what this confidence element evaluates at step_z"
-    )
+    # Scoring (representative; runtime can override per invocation)
+    bms_raw: float = Field(ge=0.0, le=1.0)
+    bms_failure_adj: float = 0.0
+    bms_volume_adj: float = 0.0
+    bms_altitude_adj: float = 0.0
+    bms_score: float = Field(ge=0.0, le=1.0)
+    bms_threshold: str
+    confidence_band: Literal["HIGH", "MEDIUM", "LOW", "OPEN"]
 
-    process_steps: list[ProcessStep] = []
+    # Semantics (Y-axis)
+    diamond_step_semantic: str = ""
+
+    # Implementation
+    archetype: str  # "A1.7", "A2.3", etc.
+    implementation_status: ImplementationStatus = ImplementationStatus.NOT_STARTED
+    runtime_entrypoint: str = ""
+
+    # Operational
     primary_stack: list[str] = []
-    gates: list[str] = []
-    approval_surface: str = "AionUI"
-    audit_path: str = ""
+    quality_gates: list[str] = []
+    tools: list[str] = []
+    models: list[str] = []
+    cost_band_usd: str
+    approval_policy: str
+    proof_policy: str = "required"
+    audit_policy: str = "append-only"
+    escalation_policy: str = ""
 
-    examples: list[Example] = []
-
-    question_bank: list[Question] = Field(
-        default_factory=list,
-        description="~30 canned questions/criteria for this Y-cell. "
-                    "Same 30 appear on every Z-slice; Z determines evaluation lens.",
-    )
+    # Engines wired
     engine_refs: EngineRefs = Field(default_factory=EngineRefs)
+    question_bank: list[Question] = Field(default_factory=list)
 
+    # Governance
     next_rescore: str = ""
     recalibration_cron: str = "weekly"
     drift_trigger: str = "brier_score > 0.15 OR rollback_rate > 5%"
 
     generated_at: datetime = Field(default_factory=datetime.utcnow)
-    schema_version: str = "0.1.0"
-
-
-# 20 scoring criteria
-CRITERIA = [
-    "C1", "C2", "C3", "C4", "C5",
-    "C6", "C7", "C8", "C9", "C10",
-    "C11", "C12", "C13", "C14",
-    "C15", "C16", "C17", "C18",
-    "C19", "C20",
-]
-
-CRITERION_NAMES = {
-    "C1": "Failure Cost",
-    "C2": "Reversibility",
-    "C3": "Regulatory/Compliance Exposure",
-    "C4": "Auditability Requirement",
-    "C5": "Blast Radius",
-    "C6": "Output Schema Definability",
-    "C7": "Input Structure",
-    "C8": "Rule Coverage",
-    "C9": "Test Surface",
-    "C10": "Mechanism Clarity (RIG doctrine)",
-    "C11": "Volume per Day",
-    "C12": "Latency Budget",
-    "C13": "Cost Sensitivity",
-    "C14": "Recurrence Pattern",
-    "C15": "Sigma Deviation Target",
-    "C16": "Drift Tolerance",
-    "C17": "Creative Variation Required",
-    "C18": "Judgment Depth",
-    "C19": "Human-in-Loop Requirement",
-    "C20": "Tooling Maturity",
-}
+    schema_version: str = "0.2.0"

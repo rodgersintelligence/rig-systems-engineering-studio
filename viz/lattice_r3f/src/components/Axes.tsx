@@ -1,5 +1,5 @@
 import { Text } from '@react-three/drei';
-import { ALTITUDE_ORDER, CONFIDENCE_ORDER, DIAMOND_ORDER, STEP_ORDER } from '../types/lattice';
+import { ALTITUDE_ORDER, DIAMOND_ORDER, MODE_ORDER, STEP_ORDER } from '../types/lattice';
 
 const AXIS_OFFSET = -1.2;
 const LABEL_COLOR = '#94a3b8';
@@ -8,7 +8,7 @@ const TITLE_COLOR = '#e2e8f0';
 export function Axes() {
   return (
     <>
-      {/* X-axis: Altitude */}
+      {/* X-axis: Altitude (7) */}
       {ALTITUDE_ORDER.map((alt, i) => (
         <Text
           key={`x-${alt}`}
@@ -27,7 +27,7 @@ export function Axes() {
         color={TITLE_COLOR}
         anchorX="center"
       >
-        X — Altitude
+        X — Altitude (7)
       </Text>
 
       {/* Y-axis: Diamond × IQRSQPI (21) */}
@@ -49,41 +49,36 @@ export function Axes() {
         })
       )}
       <Text
-        position={[AXIS_OFFSET - 2.0, 10, AXIS_OFFSET]}
+        position={[AXIS_OFFSET - 2.2, 10, AXIS_OFFSET]}
         fontSize={0.45}
         color={TITLE_COLOR}
         rotation={[0, 0, Math.PI / 2]}
         anchorX="center"
       >
-        Y — Triple Diamond × IQRSQPI
+        Y — Diamond × IQRSQPI (21)
       </Text>
 
-      {/* Z-axis: Confidence × IQRSQPI (21) */}
-      {CONFIDENCE_ORDER.flatMap((c) =>
-        STEP_ORDER.map((s, j) => {
-          const ci = CONFIDENCE_ORDER.indexOf(c);
-          return (
-            <Text
-              key={`z-${c}.${s}`}
-              position={[AXIS_OFFSET, AXIS_OFFSET, ci * 7 + j]}
-              fontSize={0.22}
-              color={LABEL_COLOR}
-              anchorX="right"
-              anchorY="middle"
-              rotation={[0, -Math.PI / 2, 0]}
-            >
-              {`${c.replace('ADJ_', '')}.${s}`}
-            </Text>
-          );
-        })
-      )}
+      {/* Z-axis: Mode (4) */}
+      {MODE_ORDER.map((m, i) => (
+        <Text
+          key={`z-${m}`}
+          position={[AXIS_OFFSET, AXIS_OFFSET, i]}
+          fontSize={0.32}
+          color={LABEL_COLOR}
+          anchorX="right"
+          anchorY="middle"
+          rotation={[0, -Math.PI / 2, 0]}
+        >
+          {m}
+        </Text>
+      ))}
       <Text
-        position={[AXIS_OFFSET, AXIS_OFFSET - 1.4, 10]}
+        position={[AXIS_OFFSET, AXIS_OFFSET - 1.4, 1.5]}
         fontSize={0.45}
         color={TITLE_COLOR}
         anchorX="center"
       >
-        Z — BMS Confidence × IQRSQPI
+        Z — Mode (4)
       </Text>
     </>
   );

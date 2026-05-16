@@ -1,11 +1,11 @@
-"""Deterministic 3,087-cell lattice generator.
+"""Deterministic generator for the corrected 84-coordinate / 588-cell lattice.
 
-Iterates X (altitude) x Y (diamond, step) x Z (confidence_element, step).
-Produces 7 x 21 x 21 = 3,087 BuildCards.
+Iterates: 7 altitudes x 3 diamonds x 4 modes = 84 primary coordinates,
+each expanded to 7 IQRSQPI steps = 588 process-expanded execution cells.
 
 Run:
     python -m lattice.generator                # writes YAML + MD + lattice_index.json
-    python -m lattice.generator --validate     # validates without writing
+    python -m lattice.generator --validate     # in-memory; doesn't write
 """
 from __future__ import annotations
 
@@ -16,116 +16,162 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from .build_card import (
-    Altitude, BuildCard, ConfidenceElement, Diamond, EngineRefs, IQRSQPI, BuildMode,
+    Altitude, BuildCard, BuildMode, Diamond, EngineRefs, IQRSQPI,
+    ImplementationStatus, MODE_COST_BANDS, MODE_LONG_NAMES,
 )
-from .confidence_elements import CONFIDENCE_SEMANTICS
 from .integrations import dv_engines
 from .integrations.predictions import MIRO_FISH_CRITERIA
 from .question_bank import bank_for_cell
-from .score import (
-    ALT_INDEX, compute_bms, mode_from_bms, score_criteria,
-)
+from .score import coordinate_bms, threshold_for, confidence_band_for
 from .step_semantics import STEP_SEMANTICS
 
-STACK_BY_ALTITUDE: dict[Altitude, list[str]] = {
-    Altitude.L7_VISION: ["Claude Opus", "CrewAI", "Phronema", "Consensus/arXiv", "Neo4j"],
-    Altitude.L6_STRATEGY: ["Claude Sonnet", "OR-Tools", "Phronema", "Neo4j", "Postgres"],
-    Altitude.L5_PROGRAMS: ["Claude Sonnet", "LangGraph", "Cookiecutter", "SQLite", "Plotly"],
-    Altitude.L4_SYSTEMS: ["Claude Sonnet", "LangGraph", "Pydantic", "DVC", "Promptfoo"],
-    Altitude.L3_WORKFLOWS: ["Sonnet/Haiku", "LangGraph", "Temporal", "Pydantic", "Langfuse"],
-    Altitude.L2_TASKS: ["Haiku / local Llama", "MLX", "Pydantic", "httpx", "Langfuse"],
-    Altitude.L1_ARTIFACTS: ["Haiku / local Llama", "MLX", "Jinja2", "Pydantic", "AionUI"],
+# Which modes have a working implementation in the private repo today.
+IMPLEMENTED_MODES = {BuildMode.A1_PYTHON_ONLY, BuildMode.A2_HYBRID}
+SPEC_AUTHORED_MODES = {BuildMode.A3_AGENT_BOUNDED, BuildMode.A4_LLM_AGENT_FREE}
+
+STACK_BY_MODE = {
+    BuildMode.A1_PYTHON_ONLY: [
+        "pydantic", "jinja2", "httpx", "sqlalchemy", "MCP clients", "Haiku/MLX (60-word shim)",
+    ],
+    BuildMode.A2_HYBRID: [
+        "LangGraph", "Sonnet (in nodes)", "NeMo Guardrails", "Pydantic + Outlines", "Temporal/Prefect",
+    ],
+    BuildMode.A3_AGENT_BOUNDED: [
+        "Sonnet/Opus agents", "Mem0", "MCP tool ring", "Promptfoo", "AionUI (72h signoff)",
+    ],
+    BuildMode.A4_LLM_AGENT_FREE: [
+        "CrewAI hierarchical", "Opus", "OR-Tools/PuLP", "Brier prediction loop", "AionUI (no timeout)",
+    ],
 }
 
-GATES_BY_ALTITUDE: dict[Altitude, list[str]] = {
-    Altitude.L7_VISION: ["physics_31_finetuning", "physics_35_bell", "cognitive_01_rupture",
-                         "nature_22_evolution", "rig_l_composite"],
-    Altitude.L6_STRATEGY: ["physics_31", "physics_38", "cognitive_05", "nature_24", "rig_l"],
-    Altitude.L5_PROGRAMS: ["physics_32", "cognitive_07", "nature_22", "rig_l"],
-    Altitude.L4_SYSTEMS: ["physics_31", "cognitive_07_voltage", "nature_22", "anti_slop", "rig_l"],
-    Altitude.L3_WORKFLOWS: ["physics_33", "cognitive_12", "anti_slop", "rig_l_lite"],
-    Altitude.L2_TASKS: ["physics_34", "anti_slop"],
-    Altitude.L1_ARTIFACTS: ["physics_31", "anti_slop", "claim_validator"],
+GATES_BY_ALTITUDE = {
+    Altitude.L7: ["physics_31", "physics_35_bell", "cognitive_01_rupture", "nature_22", "rig_l_composite"],
+    Altitude.L6: ["physics_31", "physics_38", "cognitive_05", "nature_24", "rig_l"],
+    Altitude.L5: ["physics_32", "cognitive_07", "nature_22", "rig_l"],
+    Altitude.L4: ["physics_31", "cognitive_07_voltage", "nature_22", "anti_slop", "rig_l"],
+    Altitude.L3: ["physics_33", "cognitive_12", "anti_slop", "rig_l_lite"],
+    Altitude.L2: ["physics_34", "anti_slop"],
+    Altitude.L1: ["physics_31", "anti_slop", "claim_validator"],
+}
+
+APPROVAL_POLICY = {
+    BuildMode.A1_PYTHON_ONLY: "conditional",
+    BuildMode.A2_HYBRID: "risk-classified conditional",
+    BuildMode.A3_AGENT_BOUNDED: "mandatory (72h timeout)",
+    BuildMode.A4_LLM_AGENT_FREE: "mandatory (no timeout) + post-mortem",
+}
+
+ESCALATION_BY_MODE = {
+    BuildMode.A1_PYTHON_ONLY: "UNKNOWN intent -> escalate to A3.1",
+    BuildMode.A2_HYBRID: "confidence < 0.8 or gate fail -> escalate to A3.1",
+    BuildMode.A3_AGENT_BOUNDED: "budget cap or quality fail -> escalate to A4.1",
+    BuildMode.A4_LLM_AGENT_FREE: "block; cannot escalate (top of lattice)",
 }
 
 
-def score_cell(
-    altitude: Altitude, diamond_y: Diamond, step_y: IQRSQPI,
-    confidence_element_z: ConfidenceElement, step_z: IQRSQPI,
-) -> BuildCard:
-    scores = score_criteria(altitude, diamond_y, step_y)
-    raw, adj_f, adj_v, adj_a, bms = compute_bms(scores, altitude)
-    bms_r = round(bms, 4)  # classify on the rounded value so stored bms and mode agree
+def _implementation_status(mode: BuildMode) -> ImplementationStatus:
+    if mode in IMPLEMENTED_MODES:
+        return ImplementationStatus.IMPLEMENTED
+    if mode in SPEC_AUTHORED_MODES:
+        return ImplementationStatus.SPEC_AUTHORED
+    return ImplementationStatus.NOT_STARTED
 
-    contribution = {
-        ConfidenceElement.RAW: raw,
-        ConfidenceElement.ADJ_FAILURE: adj_f,
-        ConfidenceElement.ADJ_VOLUME: adj_v,
-    }[confidence_element_z]
 
-    cell_id = f"{altitude.value}-{diamond_y.value}.{step_y.value}-{confidence_element_z.value}.{step_z.value}"
+def build_card(altitude: Altitude, diamond: Diamond, mode: BuildMode, step: IQRSQPI) -> BuildCard:
+    raw, adj_f, adj_v, adj_a, score = coordinate_bms(altitude, mode)
+    archetype = f"{mode.value}.{list(IQRSQPI).index(step) + 1}"
+    coord_id = f"{altitude.value}-{diamond.value}-{mode.value}"
+    cell_id = f"{coord_id}-{step.value}"
 
-    sem_y = STEP_SEMANTICS[(diamond_y, step_y)]
-    sem_z = CONFIDENCE_SEMANTICS[(confidence_element_z, step_z)]
+    sem = STEP_SEMANTICS[(diamond, step)]
 
-    # Engine refs: DV at Research, prediction engines at Quality.
-    refs = EngineRefs(diamond_sigma_target=dv_engines.rung_for_diamond(diamond_y))
-    if step_y == IQRSQPI.RESEARCH:
+    refs = EngineRefs(diamond_sigma_target=dv_engines.rung_for_diamond_mode(diamond))
+    if step == IQRSQPI.RESEARCH:
         refs.dv_research = dv_engines.research_engines()
-    if step_y == IQRSQPI.QUALITY:
+    if step == IQRSQPI.QUALITY:
         refs.dv_quality_gates = dv_engines.quality_gates()
-        refs.predictions = ["mirofish:" + c for c in MIRO_FISH_CRITERIA] + ["miroshark", "milkyway"]
+        refs.predictions = (
+            [f"mirofish:{c}" for c in MIRO_FISH_CRITERIA] + ["miroshark", "milkyway"]
+        )
 
     return BuildCard(
         cell_id=cell_id,
         altitude=altitude,
-        diamond_y=diamond_y,
-        step_y=step_y,
-        confidence_element_z=confidence_element_z,
-        step_z=step_z,
-        scores=scores,
-        raw=round(raw, 4),
-        adj_failure=round(adj_f, 4),
-        adj_volume=round(adj_v, 4),
-        adj_altitude=round(adj_a, 4),
-        bms=bms_r,
-        mode=mode_from_bms(bms_r),
-        confidence_contribution=round(contribution, 4),
-        diamond_step_semantic=f"{sem_y['name']}: {sem_y['description']}",
-        confidence_step_semantic=f"{sem_z['name']}: {sem_z['description']}",
-        primary_stack=STACK_BY_ALTITUDE[altitude],
-        gates=GATES_BY_ALTITUDE[altitude],
-        audit_path=f"phronema://audit/{altitude.value}/{cell_id}/",
-        next_rescore=(date.today() + timedelta(days=90)).isoformat(),
-        question_bank=bank_for_cell(diamond_y, step_y),
+        diamond=diamond,
+        mode=mode,
+        step=step,
+        coordinate_id=coord_id,
+        bms_raw=round(raw, 4),
+        bms_failure_adj=round(adj_f, 4),
+        bms_volume_adj=round(adj_v, 4),
+        bms_altitude_adj=round(adj_a, 4),
+        bms_score=round(score, 4),
+        bms_threshold=threshold_for(mode),
+        confidence_band=confidence_band_for(mode),  # type: ignore[arg-type]
+        diamond_step_semantic=f"{sem['name']}: {sem['description']}",
+        archetype=archetype,
+        implementation_status=_implementation_status(mode),
+        runtime_entrypoint=f"rig.archetypes.{mode.value.lower()}_{MODE_LONG_NAMES[mode].lower()}",
+        primary_stack=STACK_BY_MODE[mode],
+        quality_gates=GATES_BY_ALTITUDE[altitude],
+        tools=STACK_BY_MODE[mode],
+        models=[],
+        cost_band_usd=MODE_COST_BANDS[mode],
+        approval_policy=APPROVAL_POLICY[mode],
+        escalation_policy=ESCALATION_BY_MODE[mode],
         engine_refs=refs,
+        question_bank=bank_for_cell(diamond, step),
+        next_rescore=(date.today() + timedelta(days=90)).isoformat(),
     )
 
 
 def generate_all() -> list[BuildCard]:
+    """7 x 3 x 4 x 7 = 588 cells."""
     cards: list[BuildCard] = []
-    for alt, dia, sy, conf, sz in itertools.product(
-        Altitude, Diamond, IQRSQPI, ConfidenceElement, IQRSQPI,
-    ):
-        cards.append(score_cell(alt, dia, sy, conf, sz))
+    for alt, dia, mode, step in itertools.product(Altitude, Diamond, BuildMode, IQRSQPI):
+        cards.append(build_card(alt, dia, mode, step))
     return cards
+
+
+def generate_coordinates() -> list[dict[str, str]]:
+    """84 coordinates. Used by viz when collapsing the step dimension."""
+    out: list[dict[str, str]] = []
+    for alt, dia, mode in itertools.product(Altitude, Diamond, BuildMode):
+        out.append({
+            "coordinate_id": f"{alt.value}-{dia.value}-{mode.value}",
+            "altitude": alt.value,
+            "diamond": dia.value,
+            "mode": mode.value,
+        })
+    return out
 
 
 def write_index(cards: list[BuildCard], out_dir: Path) -> Path:
     """Compact JSON for the viz layer."""
+    altitude_idx = {a: i for i, a in enumerate(Altitude)}
+    diamond_idx = {d: i for i, d in enumerate(Diamond)}
+    mode_idx = {m: i for i, m in enumerate(BuildMode)}
+    step_idx = {s: i for i, s in enumerate(IQRSQPI)}
+
     index = []
     for c in cards:
         index.append({
             "cell_id": c.cell_id,
+            "coordinate_id": c.coordinate_id,
             "altitude": c.altitude.value,
-            "altitude_index": ALT_INDEX[c.altitude],
-            "diamond_y": c.diamond_y.value,
-            "step_y": c.step_y.value,
-            "confidence_element_z": c.confidence_element_z.value,
-            "step_z": c.step_z.value,
-            "bms": c.bms,
+            "altitude_index": altitude_idx[c.altitude],
+            "diamond": c.diamond.value,
+            "diamond_index": diamond_idx[c.diamond],
             "mode": c.mode.value,
-            "contribution": c.confidence_contribution,
+            "mode_long": MODE_LONG_NAMES[c.mode],
+            "mode_index": mode_idx[c.mode],
+            "step": c.step.value,
+            "step_index": step_idx[c.step],
+            "bms_score": c.bms_score,
+            "confidence_band": c.confidence_band,
+            "archetype": c.archetype,
+            "implementation_status": c.implementation_status.value,
+            "diamond_step_semantic": c.diamond_step_semantic,
         })
     index_path = out_dir / "lattice_index.json"
     index_path.write_text(json.dumps(index, indent=2))
@@ -133,22 +179,25 @@ def write_index(cards: list[BuildCard], out_dir: Path) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate the RIG lattice (3,087 cells).")
+    parser = argparse.ArgumentParser(description="Generate the corrected 588-cell RIG lattice.")
     parser.add_argument("--out", default="lattice/cards", help="Output dir for YAML/MD cards")
     parser.add_argument("--viz-out", default="viz", help="Output dir for lattice_index.json")
-    parser.add_argument("--validate", action="store_true", help="Generate in-memory only; don't write")
+    parser.add_argument("--validate", action="store_true", help="Generate in-memory; don't write")
     args = parser.parse_args()
 
-    print("[lattice] Generating 7 x 21 x 21 = 3,087 cells …")
+    print("[lattice] Generating 7 x 3 x 4 x 7 = 588 cells ...")
     cards = generate_all()
-    assert len(cards) == 3087, f"Expected 3,087 cells, got {len(cards)}"
+    assert len(cards) == 588, f"Expected 588 cells, got {len(cards)}"
     print(f"[lattice] Generated {len(cards)} cards.")
 
     if args.validate:
         mode_counts: dict[str, int] = {}
+        impl_counts: dict[str, int] = {}
         for c in cards:
             mode_counts[c.mode.value] = mode_counts.get(c.mode.value, 0) + 1
+            impl_counts[c.implementation_status.value] = impl_counts.get(c.implementation_status.value, 0) + 1
         print(f"[lattice] Mode distribution: {mode_counts}")
+        print(f"[lattice] Implementation status: {impl_counts}")
         return 0
 
     out = Path(args.out)

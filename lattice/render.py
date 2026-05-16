@@ -1,4 +1,4 @@
-"""YAML + Markdown renderers for BuildCards."""
+"""YAML + Markdown renderers for the corrected 588-cell BuildCard."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,6 @@ from .build_card import BuildCard
 
 
 def render_yaml(card: BuildCard) -> str:
-    """Compact YAML via JSON round-trip (no yaml dep required)."""
     try:
         import yaml  # type: ignore
         return yaml.safe_dump(json.loads(card.model_dump_json()), sort_keys=False)
@@ -16,57 +15,73 @@ def render_yaml(card: BuildCard) -> str:
 
 
 def render_markdown(card: BuildCard) -> str:
+    status_emoji = {
+        "implemented": "✅",
+        "spec_authored": "📋",
+        "planned": "🟡",
+        "not_started": "⚪",
+    }.get(card.implementation_status.value, "⚪")
+
     return f"""---
 cell_id: {card.cell_id}
+coordinate_id: {card.coordinate_id}
 altitude: {card.altitude.value}
-diamond_y: {card.diamond_y.value}
-step_y: {card.step_y.value}
-confidence_element_z: {card.confidence_element_z.value}
-step_z: {card.step_z.value}
-bms: {card.bms}
+diamond: {card.diamond.value}
 mode: {card.mode.value}
+step: {card.step.value}
+archetype: {card.archetype}
+bms_score: {card.bms_score}
+confidence_band: {card.confidence_band}
+implementation_status: {card.implementation_status.value}
 schema_version: {card.schema_version}
 ---
 
 # {card.cell_id}
 
-**Mode**: `{card.mode.value}` (BMS = {card.bms})
+**Archetype**: `{card.archetype}` · **Mode**: `{card.mode.value}` ({card.confidence_band}, BMS = {card.bms_score})
+**Implementation**: {status_emoji} `{card.implementation_status.value}`
 
-## Position
-- **X / Altitude**: `{card.altitude.value}`
-- **Y / Diamond.Step**: `{card.diamond_y.value}.{card.step_y.value}` — {card.diamond_step_semantic}
-- **Z / Confidence.Step**: `{card.confidence_element_z.value}.{card.step_z.value}` — {card.confidence_step_semantic}
+## Coordinate
+- **Altitude**: `{card.altitude.value}` (X)
+- **Diamond**: `{card.diamond.value}` (Y)
+- **Mode**: `{card.mode.value}` (Z)
+- **IQRSQPI Step**: `{card.step.value}` ({card.diamond_step_semantic})
+- **Coordinate**: `{card.coordinate_id}`
 
 ## BMS Breakdown
 | Component | Value |
 | --- | --- |
-| RAW | {card.raw} |
-| ADJ_failure | {card.adj_failure} |
-| ADJ_volume | {card.adj_volume} |
-| ADJ_altitude | {card.adj_altitude} |
-| **BMS (final)** | **{card.bms}** |
-
-This cell's Z-axis confidence contribution: `{card.confidence_element_z.value} = {card.confidence_contribution}`.
+| RAW | {card.bms_raw} |
+| Failure adj | {card.bms_failure_adj} |
+| Volume adj | {card.bms_volume_adj} |
+| Altitude adj | {card.bms_altitude_adj} |
+| **Score** | **{card.bms_score}** |
+| Threshold | `{card.bms_threshold}` |
 
 ## Stack
 {chr(10).join(f"- {s}" for s in card.primary_stack)}
 
-## Gates
-{chr(10).join(f"- `{g}`" for g in card.gates)}
-
-## Audit
-`{card.audit_path}`
+## Quality gates
+{chr(10).join(f"- `{g}`" for g in card.quality_gates)}
 
 ## Engines wired
 
 - **Diamond sigma target**: `{card.engine_refs.diamond_sigma_target}` (D1=+30, D2=+5, D3=0)
 - **DV Research engines**: {", ".join("`" + e + "`" for e in card.engine_refs.dv_research) or "_(only fires at Research step)_"}
-- **DV Quality gates (physics)**: {", ".join("`" + e + "`" for e in card.engine_refs.dv_quality_gates) or "_(only fires at Quality step)_"}
+- **DV Quality gates**: {", ".join("`" + e + "`" for e in card.engine_refs.dv_quality_gates) or "_(only fires at Quality step)_"}
 - **Prediction engines**: {", ".join("`" + p + "`" for p in card.engine_refs.predictions) or "_(only fires at Quality step)_"}
+
+## Operations
+- **Cost band**: `{card.cost_band_usd}`
+- **Approval policy**: `{card.approval_policy}`
+- **Proof policy**: `{card.proof_policy}`
+- **Audit policy**: `{card.audit_policy}`
+- **Escalation**: `{card.escalation_policy}`
+- **Runtime entrypoint**: `{card.runtime_entrypoint}`
 
 ## Question bank ({len(card.question_bank)} entries)
 
-{chr(10).join(f"- **`{q.id}`** [{q.severity}] {q.text} _pass:_ `{q.pass_condition}`" for q in card.question_bank[:10])}
+{chr(10).join(f"- **`{q.id}`** [{q.severity}] {q.text}" for q in card.question_bank[:10])}
 
 _+{max(0, len(card.question_bank) - 10)} more — full bank in YAML._
 

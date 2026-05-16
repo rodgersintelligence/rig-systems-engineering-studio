@@ -1,36 +1,67 @@
 import { useFilters } from '../store/filters';
 import {
-  ALTITUDE_ORDER, CONFIDENCE_ORDER, DIAMOND_ORDER, LatticeCell, MODE_COLORS, Mode,
+  ALTITUDE_ORDER, DIAMOND_ORDER, IMPL_COLORS, ImplStatus, LatticeCell,
+  MODE_COLORS, MODE_LONG_NAMES, MODE_ORDER, Mode, STEP_ORDER,
 } from '../types/lattice';
 
 interface Props {
   cells: LatticeCell[];
 }
 
+const IMPL_ORDER: ImplStatus[] = ['implemented', 'spec_authored', 'planned', 'not_started'];
+
 export function Sidebar({ cells }: Props) {
   const f = useFilters();
   const visible = cells.filter(f.isCellVisible);
 
   const byMode = (m: Mode) => visible.filter((c) => c.mode === m).length;
+  const byImpl = (i: ImplStatus) => visible.filter((c) => c.implementation_status === i).length;
 
   return (
     <div style={panel}>
-      <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>
+      <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
         RIG Lattice
       </div>
-      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
-        7 × 21 × 21 = 3,087 cells · <b style={{ color: '#e5e5e5' }}>{visible.length.toLocaleString()}</b> shown
+      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 14 }}>
+        7 × 3 × 4 × 7 = <b style={{ color: '#e5e5e5' }}>588 cells</b><br />
+        <b style={{ color: '#e5e5e5' }}>{visible.length.toLocaleString()}</b> shown
       </div>
 
+      <Section title="Color by">
+        <Toggle
+          active={!f.coverageMode}
+          onClick={() => f.setCoverageMode(false)}
+          label="Mode (A1-A4)"
+        />
+        <Toggle
+          active={f.coverageMode}
+          onClick={() => f.setCoverageMode(true)}
+          label="Coverage (impl)"
+        />
+      </Section>
+
       <Section title="Mode">
-        {(Object.keys(MODE_COLORS) as Mode[]).map((m) => (
+        {MODE_ORDER.map((m) => (
           <Toggle
             key={m}
             active={f.modes.has(m)}
             onClick={() => f.toggleMode(m)}
             color={MODE_COLORS[m]}
-            label={m}
+            label={`${m} ${MODE_LONG_NAMES[m]}`}
             count={byMode(m)}
+          />
+        ))}
+      </Section>
+
+      <Section title="Implementation status">
+        {IMPL_ORDER.map((i) => (
+          <Toggle
+            key={i}
+            active={f.implStatuses.has(i)}
+            onClick={() => f.toggleImpl(i)}
+            color={IMPL_COLORS[i]}
+            label={i.replace('_', ' ')}
+            count={byImpl(i)}
           />
         ))}
       </Section>
@@ -46,7 +77,7 @@ export function Sidebar({ cells }: Props) {
         ))}
       </Section>
 
-      <Section title="Diamond (Y)">
+      <Section title="Diamond">
         {DIAMOND_ORDER.map((d) => (
           <Toggle
             key={d}
@@ -57,45 +88,49 @@ export function Sidebar({ cells }: Props) {
         ))}
       </Section>
 
-      <Section title="Confidence element (Z)">
-        {CONFIDENCE_ORDER.map((c) => (
+      <Section title="IQRSQPI step">
+        {STEP_ORDER.map((s) => (
           <Toggle
-            key={c}
-            active={f.confidence.has(c)}
-            onClick={() => f.toggleConfidence(c)}
-            label={c}
+            key={s}
+            active={f.steps.has(s)}
+            onClick={() => f.toggleStep(s)}
+            label={s}
           />
         ))}
       </Section>
 
       <Section title="BMS range">
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={f.bmsRange[0]}
-          onChange={(e) => f.setBmsRange([parseFloat(e.target.value), f.bmsRange[1]])}
-          style={{ width: '100%' }}
-        />
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={f.bmsRange[1]}
-          onChange={(e) => f.setBmsRange([f.bmsRange[0], parseFloat(e.target.value)])}
-          style={{ width: '100%' }}
-        />
-        <div style={{ fontSize: 12, color: '#94a3b8' }}>
-          {f.bmsRange[0].toFixed(2)} → {f.bmsRange[1].toFixed(2)}
+        <div style={{ width: '100%' }}>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={f.bmsRange[0]}
+            onChange={(e) => f.setBmsRange([parseFloat(e.target.value), f.bmsRange[1]])}
+            style={{ width: '100%' }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={f.bmsRange[1]}
+            onChange={(e) => f.setBmsRange([f.bmsRange[0], parseFloat(e.target.value)])}
+            style={{ width: '100%' }}
+          />
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>
+            {f.bmsRange[0].toFixed(2)} → {f.bmsRange[1].toFixed(2)}
+          </div>
         </div>
       </Section>
 
       <button onClick={f.reset} style={resetBtn}>Reset filters</button>
 
-      <div style={{ marginTop: 24, fontSize: 11, color: '#64748b' }}>
-        Click a cell to open its card. Drag to rotate. Scroll to zoom.
+      <div style={{ marginTop: 16, fontSize: 10, color: '#64748b', lineHeight: 1.4 }}>
+        Click a cube to open its BuildCard. Drag to rotate. Scroll to zoom.
+        <br />
+        Toggle <i>Coverage (impl)</i> to color-code which archetypes are built vs spec-only.
       </div>
     </div>
   );
@@ -103,8 +138,8 @@ export function Sidebar({ cells }: Props) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: 0.5, marginBottom: 6 }}>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: 0.5, marginBottom: 6 }}>
         {title}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{children}</div>
@@ -124,11 +159,12 @@ function Toggle({
         background: active ? (color ?? '#1e293b') : 'transparent',
         color: active ? (color ? '#0a0a0a' : '#e5e5e5') : '#64748b',
         border: `1px solid ${active ? (color ?? '#475569') : '#334155'}`,
-        padding: '4px 8px',
+        padding: '3px 7px',
         borderRadius: 4,
         fontSize: 11,
         cursor: 'pointer',
         fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
       }}
     >
       {label}{count !== undefined ? ` (${count.toLocaleString()})` : ''}
@@ -140,14 +176,14 @@ const panel: React.CSSProperties = {
   position: 'absolute',
   top: 16,
   left: 16,
-  width: 280,
-  padding: 16,
+  width: 300,
+  padding: 14,
   background: 'rgba(15, 23, 42, 0.92)',
   border: '1px solid #1e293b',
   borderRadius: 8,
   backdropFilter: 'blur(8px)',
   color: '#e5e5e5',
-  fontSize: 13,
+  fontSize: 12,
   zIndex: 10,
   maxHeight: 'calc(100vh - 32px)',
   overflowY: 'auto',
@@ -159,9 +195,9 @@ const resetBtn: React.CSSProperties = {
   border: '1px solid #334155',
   padding: '6px 12px',
   borderRadius: 4,
-  fontSize: 12,
+  fontSize: 11,
   cursor: 'pointer',
   fontFamily: 'inherit',
   width: '100%',
-  marginTop: 8,
+  marginTop: 4,
 };

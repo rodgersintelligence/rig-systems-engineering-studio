@@ -43,9 +43,9 @@ DV_FRAMEWORK_PATH = (
 SIGMA_RUNGS: list[int | float] = [-30, -25, -20, -15, -10, -7.5, -5, 0, 5, 7.5, 10, 15, 20, 25, 30]
 
 DIAMOND_DEFAULT_SIGMA: dict[Diamond, int] = {
-    Diamond.D1_DISCOVERY: 30,      # broad: push hardest outward
-    Diamond.D2_SOLUTION: 5,        # narrowing: tighten to mechanism
-    Diamond.D3_EVOLUTION: 0,       # forensic: baseline + drift comparisons
+    Diamond.D1: 30,      # broad: push hardest outward
+    Diamond.D2: 5,       # narrowing: tighten to mechanism
+    Diamond.D3: 0,       # forensic: baseline + drift comparisons
 }
 
 
@@ -66,6 +66,11 @@ def is_available() -> bool:
 
 
 def rung_for_diamond(diamond: Diamond) -> int:
+    return DIAMOND_DEFAULT_SIGMA[diamond]
+
+
+def rung_for_diamond_mode(diamond: Diamond) -> int:
+    """Alias used by generator.py."""
     return DIAMOND_DEFAULT_SIGMA[diamond]
 
 
@@ -132,14 +137,9 @@ def quality_gates() -> list[str]:
 
 
 def diamond_engine_intensity(diamond: Diamond) -> dict[str, int | float]:
-    """Map (diamond, engine_layer) -> default sigma target.
-
-    D1 pushes cognitive + nature HARD outward (broad).
-    D2 holds cognitive at +5, tightens physics gates (narrow to mechanism).
-    D3 baselines at 0 and looks for negative drift (forensic).
-    """
-    if diamond == Diamond.D1_DISCOVERY:
+    """Map (diamond, engine_layer) -> default sigma target."""
+    if diamond == Diamond.D1:
         return {"cognitive": 30, "nature": 25, "physics": 0}
-    if diamond == Diamond.D2_SOLUTION:
+    if diamond == Diamond.D2:
         return {"cognitive": 5, "nature": 5, "physics": 0}
     return {"cognitive": 0, "nature": 0, "physics": -5}
