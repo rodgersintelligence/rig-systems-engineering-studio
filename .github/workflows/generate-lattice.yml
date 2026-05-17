@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        run: pip install -e ".[viz,yaml]"
+        run: pip install -e ".[viz,yaml,dev]"
 
       - name: Validate generator (in-memory)
         run: python -m lattice.generator --validate
