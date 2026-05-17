@@ -15,6 +15,7 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
+from .altitude_semantics import ALTITUDE_SEMANTICS
 from .build_card import (
     Altitude, BuildCard, BuildMode, Diamond, EngineRefs, IQRSQPI,
     ImplementationStatus, MODE_COST_BANDS, MODE_LONG_NAMES,
@@ -22,7 +23,10 @@ from .build_card import (
 from .integrations import dv_engines
 from .integrations.predictions import MIRO_FISH_CRITERIA
 from .question_bank import bank_for_cell
-from .score import coordinate_bms, threshold_for, confidence_band_for
+from .score import (
+    bms_alignment, confidence_band_for, coordinate_bms, natural_bms,
+    threshold_for,
+)
 from .step_semantics import STEP_SEMANTICS
 
 # Which modes have a working implementation in the private repo today.
@@ -85,11 +89,17 @@ def _implementation_status(mode: BuildMode) -> ImplementationStatus:
 
 def build_card(altitude: Altitude, diamond: Diamond, mode: BuildMode, step: IQRSQPI) -> BuildCard:
     raw, adj_f, adj_v, adj_a, score = coordinate_bms(altitude, mode)
+
+    # Real 20-criterion BMS — varies per (alt, diamond, step), independent of mode.
+    nat = natural_bms(altitude, diamond, step)
+    align = bms_alignment(nat["bms"], mode)
+
     archetype = f"{mode.value}.{list(IQRSQPI).index(step) + 1}"
     coord_id = f"{altitude.value}-{diamond.value}-{mode.value}"
     cell_id = f"{coord_id}-{step.value}"
 
     sem = STEP_SEMANTICS[(diamond, step)]
+    alt_sem = ALTITUDE_SEMANTICS[altitude]
 
     refs = EngineRefs(diamond_sigma_target=dv_engines.rung_for_diamond_mode(diamond))
     if step == IQRSQPI.RESEARCH:
@@ -114,6 +124,17 @@ def build_card(altitude: Altitude, diamond: Diamond, mode: BuildMode, step: IQRS
         bms_score=round(score, 4),
         bms_threshold=threshold_for(mode),
         confidence_band=confidence_band_for(mode),  # type: ignore[arg-type]
+        natural_bms_raw=nat["raw"],
+        natural_bms_score=nat["bms"],
+        natural_bms_failure_adj=nat["adj_failure"],
+        natural_bms_volume_adj=nat["adj_volume"],
+        natural_bms_altitude_adj=nat["adj_altitude"],
+        natural_mode=align["natural_mode"],
+        bms_alignment=align["alignment"],
+        stretch_direction=align["stretch_direction"],
+        criteria=nat["criteria"],
+        altitude_name=alt_sem["name"],
+        altitude_purpose=alt_sem["purpose"],
         diamond_step_semantic=f"{sem['name']}: {sem['description']}",
         archetype=archetype,
         implementation_status=_implementation_status(mode),
@@ -166,6 +187,7 @@ def write_index(cards: list[BuildCard], out_dir: Path) -> Path:
             "coordinate_id": c.coordinate_id,
             "altitude": c.altitude.value,
             "altitude_index": altitude_idx[c.altitude],
+            "altitude_name": c.altitude_name,
             "diamond": c.diamond.value,
             "diamond_index": diamond_idx[c.diamond],
             "mode": c.mode.value,
@@ -174,6 +196,10 @@ def write_index(cards: list[BuildCard], out_dir: Path) -> Path:
             "step": c.step.value,
             "step_index": step_idx[c.step],
             "bms_score": c.bms_score,
+            "natural_bms_score": c.natural_bms_score,
+            "natural_mode": c.natural_mode,
+            "bms_alignment": c.bms_alignment,
+            "stretch_direction": c.stretch_direction,
             "confidence_band": c.confidence_band,
             "archetype": c.archetype,
             "implementation_status": c.implementation_status.value,

@@ -29,14 +29,24 @@ export function Sidebar({ cells }: Props) {
 
       <Section title="Color by">
         <Toggle
-          active={!f.coverageMode}
-          onClick={() => f.setCoverageMode(false)}
+          active={f.colorMode === 'mode'}
+          onClick={() => f.setColorMode('mode')}
           label="Mode (A1-A4)"
         />
         <Toggle
-          active={f.coverageMode}
-          onClick={() => f.setCoverageMode(true)}
+          active={f.colorMode === 'coverage'}
+          onClick={() => f.setColorMode('coverage')}
           label="Coverage (impl)"
+        />
+        <Toggle
+          active={f.colorMode === 'natural_bms'}
+          onClick={() => f.setColorMode('natural_bms')}
+          label="Natural BMS"
+        />
+        <Toggle
+          active={f.colorMode === 'stretch'}
+          onClick={() => f.setColorMode('stretch')}
+          label="Stretch"
         />
       </Section>
 

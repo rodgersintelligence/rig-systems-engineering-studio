@@ -1,4 +1,6 @@
-import { IMPL_COLORS, LatticeCell, MODE_COLORS, MODE_LONG_NAMES } from '../types/lattice';
+import {
+  IMPL_COLORS, LatticeCell, MODE_COLORS, MODE_LONG_NAMES, STRETCH_COLORS,
+} from '../types/lattice';
 import { useFilters } from '../store/filters';
 
 interface Props {
@@ -50,8 +52,39 @@ export function CellPanel({ cells }: Props) {
       </div>
 
       <Row label="Archetype" value={cell.archetype} />
-      <Row label="Altitude × Diamond × Step" value={`${cell.altitude} × ${cell.diamond} × ${cell.step}`} />
+      <Row label="Altitude × Diamond × Step"
+           value={`${cell.altitude}${cell.altitude_name ? ` (${cell.altitude_name})` : ''} × ${cell.diamond} × ${cell.step}`} />
       <Row label="Confidence band" value={cell.confidence_band} />
+
+      {cell.natural_bms_score !== undefined && (
+        <Row
+          label="Natural BMS (20-criterion rubric)"
+          value={`${cell.natural_bms_score.toFixed(3)} → ${cell.natural_mode ?? '?'}`}
+        />
+      )}
+      {cell.stretch_direction && cell.bms_alignment !== undefined && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ color: '#94a3b8', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Stretch
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+            <span style={{
+              padding: '3px 8px',
+              background: STRETCH_COLORS[cell.stretch_direction],
+              color: '#0a0a0a',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: 600,
+            }}>
+              {cell.stretch_direction}
+            </span>
+            <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#e5e5e5' }}>
+              alignment {cell.bms_alignment >= 0 ? '+' : ''}{cell.bms_alignment.toFixed(3)}
+            </span>
+          </div>
+        </div>
+      )}
+
       <Row label="Diamond × Step semantic" value={cell.diamond_step_semantic} small />
 
       <div style={{ marginTop: 14, fontSize: 11, color: '#94a3b8' }}>

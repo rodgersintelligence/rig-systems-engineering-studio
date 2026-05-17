@@ -158,7 +158,8 @@ graph LR
         N48[rig-48gb-mbp · 48GB<br/>100.76.209.22<br/>qwen3.6-27b ×8 + qwen3-14b + gemma-4-31b + glm-5.1]
         N96[rig-96gb-mac-studio-1 · 96GB<br/>100.102.142.84<br/>qwen3.5-35b-a3b + hermes-4-70b + qwen3-coder-30b]
         N256[rig-256gb-mac-studio · 256GB<br/>100.91.39.12<br/>qwen3.6-27b ×8 + hermes-4-70b + hermes-4-405b + gpt-oss-120b]
-        NBW[blackwell · GPU<br/>100.67.126.117<br/>service not yet exposed]
+        NBW[blackwell · GPU<br/>100.67.126.117<br/>vLLM :8000<br/>qwen2.5-coder-32b<br/>~1.4s round-trip]
+        T_CODING[coding tier]
     end
 
     T_A1 --> N28
@@ -170,7 +171,7 @@ graph LR
     T_A3 --> N96
     T_A3 --> N256
     T_A4 --> N256
-    T_A4 -.future.-> NBW
+    T_CODING --> NBW
 
     N28 -.fallback.-> N48
     N36 -.fallback.-> N48

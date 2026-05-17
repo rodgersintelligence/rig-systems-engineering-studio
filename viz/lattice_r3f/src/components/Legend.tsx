@@ -1,27 +1,53 @@
-import { IMPL_COLORS, ImplStatus, MODE_COLORS, MODE_LONG_NAMES, MODE_ORDER, Mode } from '../types/lattice';
+import {
+  IMPL_COLORS, ImplStatus, MODE_COLORS, MODE_LONG_NAMES, MODE_ORDER, Mode,
+  STRETCH_COLORS, StretchDirection,
+} from '../types/lattice';
 import { useFilters } from '../store/filters';
 
 const IMPL_ORDER: ImplStatus[] = ['implemented', 'spec_authored', 'planned', 'not_started'];
+const STRETCH_ORDER: StretchDirection[] = ['aligned', 'heavy', 'tight'];
+
+const STRETCH_LABELS: Record<StretchDirection, string> = {
+  aligned: 'aligned (mode matches rubric)',
+  heavy: 'heavy (chose stronger mode than needed)',
+  tight: 'tight (chose lighter mode than rubric)',
+};
+
+const NATURAL_BMS_RANGES: { label: string; color: string }[] = [
+  { label: '≥ 0.75 → A1 PYTHON_ONLY', color: '#22c55e' },
+  { label: '0.45–0.74 → A2 HYBRID', color: '#eab308' },
+  { label: '0.25–0.44 → A3 AGENT_BOUNDED', color: '#f97316' },
+  { label: '< 0.25 → A4 LLM_AGENT_FREE', color: '#ef4444' },
+];
 
 export function Legend() {
-  const coverageMode = useFilters((s) => s.coverageMode);
+  const colorMode = useFilters((s) => s.colorMode);
 
-  if (coverageMode) {
-    return (
-      <div style={panel}>
-        <div style={titleStyle}>Coverage</div>
-        {IMPL_ORDER.map((i) => (
-          <Swatch key={i} color={IMPL_COLORS[i]} label={i.replace('_', ' ')} />
-        ))}
-      </div>
-    );
+  let title = 'Mode';
+  let swatches: { color: string; label: string }[] = MODE_ORDER.map((m) => ({
+    color: MODE_COLORS[m],
+    label: `${m} · ${MODE_LONG_NAMES[m]}`,
+  }));
+
+  if (colorMode === 'coverage') {
+    title = 'Coverage';
+    swatches = IMPL_ORDER.map((i) => ({ color: IMPL_COLORS[i], label: i.replace('_', ' ') }));
+  } else if (colorMode === 'natural_bms') {
+    title = 'Natural BMS (20-criterion rubric)';
+    swatches = NATURAL_BMS_RANGES;
+  } else if (colorMode === 'stretch') {
+    title = 'Stretch direction';
+    swatches = STRETCH_ORDER.map((s) => ({
+      color: STRETCH_COLORS[s],
+      label: STRETCH_LABELS[s],
+    }));
   }
 
   return (
     <div style={panel}>
-      <div style={titleStyle}>Mode</div>
-      {MODE_ORDER.map((m) => (
-        <Swatch key={m} color={MODE_COLORS[m]} label={`${m} · ${MODE_LONG_NAMES[m]}`} />
+      <div style={titleStyle}>{title}</div>
+      {swatches.map((s) => (
+        <Swatch key={s.label} color={s.color} label={s.label} />
       ))}
     </div>
   );
@@ -51,4 +77,5 @@ const panel: React.CSSProperties = {
   borderRadius: 8,
   backdropFilter: 'blur(8px)',
   zIndex: 10,
+  maxWidth: 320,
 };

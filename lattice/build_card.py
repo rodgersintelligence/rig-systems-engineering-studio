@@ -155,7 +155,7 @@ class BuildCard(BaseModel):
     # Coordinate-level identity (84 unique)
     coordinate_id: str  # L<n>-D<n>-A<n>
 
-    # Scoring (representative; runtime can override per invocation)
+    # Scoring (LEGACY representative — for backwards compat)
     bms_raw: float = Field(ge=0.0, le=1.0)
     bms_failure_adj: float = 0.0
     bms_volume_adj: float = 0.0
@@ -163,6 +163,21 @@ class BuildCard(BaseModel):
     bms_score: float = Field(ge=0.0, le=1.0)
     bms_threshold: str
     confidence_band: Literal["HIGH", "MEDIUM", "LOW", "OPEN"]
+
+    # REAL 20-criterion-driven BMS (per Build Card Schema §3)
+    natural_bms_raw: float = Field(default=0.0, ge=0.0, le=1.0)
+    natural_bms_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    natural_bms_failure_adj: float = 0.0
+    natural_bms_volume_adj: float = 0.0
+    natural_bms_altitude_adj: float = 0.0
+    natural_mode: str = ""              # A1 | A2 | A3 | A4
+    bms_alignment: float = 0.0          # natural_bms_score - mode_floor
+    stretch_direction: str = "aligned"  # aligned | heavy | tight
+    criteria: dict[str, int] = Field(default_factory=dict)  # C1..C20
+
+    # Altitude semantic (X-axis)
+    altitude_name: str = ""             # Artifacts | Tasks | ... | Vision
+    altitude_purpose: str = ""
 
     # Semantics (Y-axis)
     diamond_step_semantic: str = ""

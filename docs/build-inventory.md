@@ -79,7 +79,7 @@ Comprehensive table of everything shipped. Status as of 2026-05-16, post live-me
 | **rig-48gb-mbp** | 100.76.209.22 | 48 GB | :1234 ✅ 18 models | :11434 ✅ | a2 synth backbone | a2_synth, a2_judge, coding |
 | **rig-36gb-mac-studio-1** | 100.89.143.27 | 36 GB | :1234 ✅ 18 models | :11434 ✅ | a1 shim node | a2_synth, a2_judge, a1_shim |
 | **rig-28gb-mbp** | 100.103.237.24 | 28 GB | :1234 ✅ 2 models | :11434 ✅ | fast tier | a1_fast, a1_shim, embedding |
-| **blackwell** | 100.67.126.117 | GPU | — | — | not yet exposed | future GPU strategic |
+| **blackwell** | 100.67.126.117 | GPU | **vLLM :8000** ✅ | n/a | **qwen2.5-coder-32b** (~1.4s) | coding tier |
 | **nas94f2ae** | 100.64.83.55 | NAS | — | — | :8080/:3000 (UI) | storage |
 | **rodgemd1-vm** | 100.89.150.120 | VM | — | — | latency ~300ms | services candidate |
 | **iphone182** | 100.77.61.95 | iPhone | — | — | mobile peer | — |

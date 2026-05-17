@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import {
   ALTITUDE_ORDER, DIAMOND_ORDER, IMPL_COLORS, ImplStatus, LatticeCell,
-  MODE_COLORS, MODE_ORDER, Mode, STEP_ORDER,
+  MODE_COLORS, MODE_ORDER, Mode, STEP_ORDER, STRETCH_COLORS,
+  bmsGradientColor,
 } from '../types/lattice';
+
+export type ColorMode = 'mode' | 'coverage' | 'natural_bms' | 'stretch';
 
 interface FilterState {
   modes: Set<Mode>;
@@ -13,7 +16,8 @@ interface FilterState {
   bmsRange: [number, number];
 
   // Visual modes
-  coverageMode: boolean;          // when true, color = implementation_status not mode
+  coverageMode: boolean;             // legacy boolean kept for backwards compat
+  colorMode: ColorMode;
   selectedCellId: string | null;
 
   toggleMode: (m: Mode) => void;
@@ -23,6 +27,7 @@ interface FilterState {
   toggleImpl: (s: ImplStatus) => void;
   setBmsRange: (r: [number, number]) => void;
   setCoverageMode: (on: boolean) => void;
+  setColorMode: (m: ColorMode) => void;
   selectCell: (id: string | null) => void;
   reset: () => void;
 
@@ -47,6 +52,7 @@ export const useFilters = create<FilterState>((set, get) => ({
   bmsRange: [0, 1],
 
   coverageMode: false,
+  colorMode: 'mode',
   selectedCellId: null,
 
   toggleMode: (m) => set((s) => {
@@ -75,7 +81,14 @@ export const useFilters = create<FilterState>((set, get) => ({
     return { implStatuses: next };
   }),
   setBmsRange: (bmsRange) => set({ bmsRange }),
-  setCoverageMode: (coverageMode) => set({ coverageMode }),
+  setCoverageMode: (coverageMode) => set({
+    coverageMode,
+    colorMode: coverageMode ? 'coverage' : 'mode',
+  }),
+  setColorMode: (colorMode) => set({
+    colorMode,
+    coverageMode: colorMode === 'coverage',
+  }),
   selectCell: (selectedCellId) => set({ selectedCellId }),
   reset: () => set({
     modes: new Set(allModes),
@@ -85,6 +98,7 @@ export const useFilters = create<FilterState>((set, get) => ({
     implStatuses: new Set(allImpls),
     bmsRange: [0, 1],
     coverageMode: false,
+    colorMode: 'mode',
     selectedCellId: null,
   }),
 
@@ -100,7 +114,16 @@ export const useFilters = create<FilterState>((set, get) => ({
 
   colorFor: (cell) => {
     const s = get();
-    if (s.coverageMode) return IMPL_COLORS[cell.implementation_status];
-    return MODE_COLORS[cell.mode];
+    switch (s.colorMode) {
+      case 'coverage':
+        return IMPL_COLORS[cell.implementation_status];
+      case 'natural_bms':
+        return bmsGradientColor(cell.natural_bms_score ?? cell.bms_score);
+      case 'stretch':
+        return STRETCH_COLORS[cell.stretch_direction ?? 'aligned'];
+      case 'mode':
+      default:
+        return MODE_COLORS[cell.mode];
+    }
   },
 }));
