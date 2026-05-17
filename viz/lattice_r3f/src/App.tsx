@@ -18,6 +18,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const connect = useEvents((s) => s.connect);
   const disconnect = useEvents((s) => s.disconnect);
+  const connected = useEvents((s) => s.connected);
+  const endpoint = useEvents((s) => s.endpoint);
 
   useEffect(() => {
     const url = `${INDEX_URL}?v=${(import.meta as any).env?.VITE_BUILD_ID ?? Date.now()}`;
@@ -76,6 +78,17 @@ export default function App() {
       <CellPanel cells={cells} />
       <Legend />
       <EventTicker />
+      {/* Phase 9 — inbox link: only render when SSE runtime is connected */}
+      {connected && endpoint && (
+        <a
+          href={`${endpoint}/inbox`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={inboxLink}
+        >
+          inbox →
+        </a>
+      )}
     </>
   );
 }
@@ -102,6 +115,22 @@ function ErrorScreen({ error }: { error: string }) {
     </div>
   );
 }
+
+const inboxLink: React.CSSProperties = {
+  position: 'absolute',
+  bottom: 16,
+  right: 16,
+  fontSize: 11,
+  fontFamily: 'monospace',
+  color: '#10b981',
+  textDecoration: 'none',
+  background: 'rgba(15, 23, 42, 0.88)',
+  border: '1px solid #1e293b',
+  borderRadius: 4,
+  padding: '3px 8px',
+  zIndex: 10,
+  letterSpacing: '0.02em',
+};
 
 const center: React.CSSProperties = {
   width: '100%',

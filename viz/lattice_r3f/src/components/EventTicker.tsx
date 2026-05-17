@@ -23,6 +23,15 @@ export function EventTicker() {
 
   const visible = recent.slice(0, 12);
 
+  // Phase 9 — open /inbox in a new tab for prediction.resolved events
+  function handleRowClick(e: { kind: string; cell_id: string | null }) {
+    if (e.kind === 'prediction.resolved' && endpoint) {
+      window.open(`${endpoint}/inbox`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (e.cell_id) selectCell(e.cell_id);
+  }
+
   return (
     <div style={panel}>
       <div style={header}>
@@ -48,7 +57,7 @@ export function EventTicker() {
       ) : visible.map((e) => (
         <div
           key={e.id}
-          onClick={() => e.cell_id && selectCell(e.cell_id)}
+          onClick={() => handleRowClick(e)}
           style={{
             display: 'grid',
             gridTemplateColumns: '8px 1fr auto',
@@ -56,7 +65,7 @@ export function EventTicker() {
             alignItems: 'center',
             padding: '2px 4px',
             fontSize: 11,
-            cursor: e.cell_id ? 'pointer' : 'default',
+            cursor: (e.cell_id || e.kind === 'prediction.resolved') ? 'pointer' : 'default',
             borderRadius: 3,
           }}
           title={JSON.stringify(e.payload).slice(0, 200)}

@@ -213,6 +213,57 @@ graph TB
 
 ---
 
+---
+
+## Phase 9 surfaces (2026-05-17)
+
+Five edges shipped in the private repo expose new observable surfaces to the
+public viewer. Summary of the public/private boundary:
+
+```mermaid
+graph LR
+    subgraph PRIVATE ["Private repo — rig.runtime (closed)"]
+        WATCHER["launchd watcher<br/>rig-cell-watcher plist<br/>always-on server"]
+        BRIEF["weekly_brief.py<br/>Sunday digest → ~/.rig/briefs/"]
+        INBOX_SRV["AionUI inbox<br/>/inbox/pending GET<br/>/inbox/{id}/resolve POST<br/>/inbox HTML"]
+        COMPOSIO["composio_bridge.py<br/>6 publishers promoted to live<br/>linear · notion · slack<br/>github · gcal · airtable"]
+        PHRONEMA["phronema.py<br/>7 stores unified<br/>audit · approval · miroshark<br/>milkyway · scheduler · briefs"]
+        WATCHER --> SRV["server.py :8765"]
+        COMPOSIO --> SRV
+        PHRONEMA --> SRV
+        SRV --> INBOX_SRV
+    end
+
+    subgraph PUBLIC ["Public repo — R3F viewer (this repo)"]
+        VIEWER["R3F lattice viewer<br/>GitHub Pages"]
+        TICKER["EventTicker.tsx<br/>SSE subscriber"]
+        INBOX_LINK["inbox → link<br/>(connected only)"]
+        CLICK_THROUGH["prediction.resolved<br/>click → /inbox"]
+    end
+
+    SRV -- "SSE /events/stream" --> TICKER
+    TICKER --> INBOX_LINK
+    TICKER --> CLICK_THROUGH
+    INBOX_LINK -- "navigates to ${endpoint}/inbox" --> INBOX_SRV
+    CLICK_THROUGH -- "navigates to ${endpoint}/inbox" --> INBOX_SRV
+    VIEWER --> TICKER
+```
+
+### What is and is not public
+
+| Surface | Public? | Notes |
+|---|---|---|
+| SSE event stream `/events/stream` | Runtime-dependent | Available when server runs on LAN; viewer silently degrades offline |
+| `/inbox` HTML page | Runtime-dependent | Linked from viewer only when SSE connected |
+| `/inbox/pending` + `/inbox/{id}/resolve` | Runtime-dependent | REST endpoints; no credentials in viewer |
+| Weekly brief content | No | Written to `~/.rig/briefs/` on private runtime only |
+| Phronema DB schema | No | Internal to private runtime |
+| Composio API key / action IDs | No | Env-var controlled in private runtime |
+| Lattice geometry + BuildCards | Yes | This repo |
+| R3F viewer source | Yes | This repo |
+
+---
+
 ## How to verify end-to-end yourself
 
 ```bash

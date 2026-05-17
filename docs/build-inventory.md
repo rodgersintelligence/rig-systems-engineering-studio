@@ -171,6 +171,31 @@ Live mesh smoke (separate runner, hits the mesh): 12 archetype × diamond runs, 
 | `a3-agent-bounded-deep-spec.md` | 310 | ✅ v1 |
 | `a4-llm-agent-free-deep-spec.md` | 340 | ✅ v1 |
 
+## 13 · Phase 9 — shipped 2026-05-17
+
+Five edges from private repo commit 43d0bbe (`codex/openclaw-rig-lattice-mvp`).
+
+### Private repo additions
+
+| Item | Files | Purpose |
+|---|---|---|
+| **Watcher launchd** | `bin/rig-cell-watcher` · `bin/rig-runtime-server` · `bin/rig-launchd-install` · `launchd/*.plist` | Always-on macOS service; server auto-restarts on reboot |
+| **Weekly brief** | `scripts/weekly_brief.py` | Sunday markdown digest of outcomes, events, audit, rubric, phronema — written to `~/.rig/briefs/` |
+| **AionUI inbox** | `rig/runtime/server.py` (+3 endpoints) | `/inbox/pending` GET · `/inbox/{id}/resolve` POST · `/inbox` HTML operator console |
+| **Composio bridges** | `rig/runtime/composio_bridge.py` | Auto-promotes 6 stub publishers to live Composio integrations when `COMPOSIO_API_KEY` present |
+| **Phronema unification** | `rig/runtime/phronema.py` · `scripts/phronema_migrate.py` | Central DB layer for 7 stores; idempotent migrator preserves old files |
+
+### Public repo additions (this repo)
+
+| Item | Files | Purpose |
+|---|---|---|
+| **Phase 9 docs** | `docs/phase9.md` | Architecture overview of 5 edges, public/private boundary, rollback paths |
+| **System diagram Phase 9** | `docs/full-system-diagram.md` | Appended "Phase 9 surfaces" section with Mermaid boundary diagram |
+| **Inbox link** | `viz/lattice_r3f/src/App.tsx` | "inbox →" link in viewer; visible only when SSE connected |
+| **Resolved click-through** | `viz/lattice_r3f/src/components/EventTicker.tsx` | `prediction.resolved` rows open `/inbox` in new tab |
+
+---
+
 ## 12 · What's no longer a stub
 
 | Was | Now |
