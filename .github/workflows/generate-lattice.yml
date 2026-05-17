@@ -27,17 +27,20 @@ jobs:
       - name: Validate generator (in-memory)
         run: python -m lattice.generator --validate
 
-      - name: Generate all 3,087 cards
+      - name: Generate all 588 cards
         run: python -m lattice.generator
 
-      - name: Assert card count
+      - name: Assert card count (588 = 7×3×4×7 corrected geometry)
         run: |
           count=$(ls lattice/cards/*.yaml | wc -l)
-          if [ "$count" -ne 3087 ]; then
-            echo "::error::Expected 3,087 YAML cards, found $count"
+          if [ "$count" -ne 588 ]; then
+            echo "::error::Expected 588 YAML cards, found $count"
             exit 1
           fi
-          echo "✅ 3,087 cards generated"
+          echo "✅ 588 cards generated"
+
+      - name: Run tests
+        run: python -m pytest tests/ -q --tb=line
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
