@@ -3,20 +3,23 @@ import { OrbitControls } from '@react-three/drei';
 import { useEffect, useState } from 'react';
 import { Axes } from './components/Axes';
 import { CellPanel } from './components/CellPanel';
+import { EventTicker } from './components/EventTicker';
 import { Lattice } from './components/Lattice';
 import { Legend } from './components/Legend';
 import { Sidebar } from './components/Sidebar';
 import { LatticeCell } from './types/lattice';
 import { gridCenter } from './lib/positions';
+import { useEvents } from './store/events';
 
 const INDEX_URL = `${import.meta.env.BASE_URL}lattice_index.json`;
 
 export default function App() {
   const [cells, setCells] = useState<LatticeCell[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const connect = useEvents((s) => s.connect);
+  const disconnect = useEvents((s) => s.disconnect);
 
   useEffect(() => {
-    // Cache-bust by deploy time so users see the latest lattice on redeploys.
     const url = `${INDEX_URL}?v=${(import.meta as any).env?.VITE_BUILD_ID ?? Date.now()}`;
     fetch(url, { cache: 'no-store' })
       .then((r) => {
@@ -26,6 +29,15 @@ export default function App() {
       .then(setCells)
       .catch((e) => setError(String(e)));
   }, []);
+
+  useEffect(() => {
+    // Move 5 — subscribe to the rig.runtime SSE event stream so the lattice
+    // pulses when cells fire / outcomes resolve / rubric tunes. Configurable
+    // via ?events=http://host:8765 query or VITE_RIG_EVENT_URL build var.
+    // Silently no-ops if the runtime server isn't reachable.
+    connect();
+    return () => disconnect();
+  }, [connect, disconnect]);
 
   if (error) {
     return <ErrorScreen error={error} />;
@@ -63,6 +75,7 @@ export default function App() {
       <Sidebar cells={cells} />
       <CellPanel cells={cells} />
       <Legend />
+      <EventTicker />
     </>
   );
 }
