@@ -86,12 +86,40 @@ def _clamp_int(v: int, lo: int = 0, hi: int = 5) -> int:
     return max(lo, min(hi, v))
 
 
+def _tuner_overrides(altitude: Altitude) -> dict[str, int]:
+    """Pull rubric-tuner overrides from rig.runtime if reachable.
+
+    Returns {criterion -> delta}. Empty dict when the private runtime isn't
+    on PYTHONPATH or rubric_tuner is offline (tests / public-only deploys).
+    """
+    import os, sys
+    if os.environ.get("RIG_DISABLE_RUBRIC_TUNER", "0") == "1":
+        return {}
+    try:
+        # Best-effort import — production runs with the private repo on sys.path.
+        from rig.runtime import get_altitude_drift  # type: ignore
+        return get_altitude_drift(altitude.value)
+    except Exception:
+        # Public-only deployments don't have rubric_tuner; that's fine.
+        return {}
+
+
 def criteria_for(altitude: Altitude, diamond: Diamond, step: IQRSQPI) -> dict[str, int]:
-    """Merge altitude priors with diamond + step modifiers; clamp each to [0,5]."""
+    """Merge altitude priors with diamond + step modifiers + tuner overrides.
+
+    Order:
+        1. ALT_DEFAULTS_C[altitude]      — doctrine
+        2. DIAMOND_MOD[diamond]           — diamond modifier
+        3. STEP_MOD[step]                 — step modifier
+        4. rubric tuner overrides         — learned from outcomes (optional)
+    Each criterion is clamped to [0, 5].
+    """
     out: dict[str, int] = dict(ALT_DEFAULTS_C[altitude])
     for k, v in DIAMOND_MOD[diamond].items():
         out[k] = _clamp_int(out.get(k, 0) + v)
     for k, v in STEP_MOD[step].items():
+        out[k] = _clamp_int(out.get(k, 0) + v)
+    for k, v in _tuner_overrides(altitude).items():
         out[k] = _clamp_int(out.get(k, 0) + v)
     return out
 

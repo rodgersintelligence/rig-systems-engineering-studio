@@ -29,6 +29,7 @@ export interface LatticeCell {
   natural_mode?: Mode;               // mode the rubric suggests
   bms_alignment?: number;            // natural_bms_score - mode_floor
   stretch_direction?: StretchDirection;
+  rubric_drift_magnitude?: number;   // sum of |delta| across criteria (rubric tuner)
   confidence_band: 'HIGH' | 'MEDIUM' | 'LOW' | 'OPEN';
   archetype: string;
   implementation_status: ImplStatus;
@@ -69,10 +70,18 @@ export const STEP_ORDER = ['I1', 'Q1', 'R', 'S', 'Q2', 'P', 'I2'] as const;
 
 /** Map a natural_bms_score in [0,1] to a color along a gradient. */
 export function bmsGradientColor(score: number): string {
-  // 0.0 (red) -> 0.25 (orange) -> 0.5 (yellow) -> 0.75 (green) -> 1.0 (teal)
   const s = Math.max(0, Math.min(1, score));
   if (s >= 0.75) return '#22c55e';      // A1 (deterministic)
   if (s >= 0.45) return '#eab308';      // A2 (hybrid)
   if (s >= 0.25) return '#f97316';      // A3 (agent)
   return '#ef4444';                      // A4 (strategic)
+}
+
+/** Map rubric_drift_magnitude to a color: dim gray (no drift) → bright purple (heavy drift). */
+export function driftGradientColor(magnitude: number): string {
+  if (magnitude <= 0) return '#525252';      // dark gray — no drift
+  if (magnitude <= 2) return '#a78bfa';      // light purple
+  if (magnitude <= 5) return '#a855f7';      // medium purple
+  if (magnitude <= 10) return '#9333ea';     // deep purple
+  return '#7e22ce';                          // saturated — extreme drift
 }

@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import {
   ALTITUDE_ORDER, DIAMOND_ORDER, IMPL_COLORS, ImplStatus, LatticeCell,
   MODE_COLORS, MODE_ORDER, Mode, STEP_ORDER, STRETCH_COLORS,
-  bmsGradientColor,
+  bmsGradientColor, driftGradientColor,
 } from '../types/lattice';
 
-export type ColorMode = 'mode' | 'coverage' | 'natural_bms' | 'stretch';
+export type ColorMode = 'mode' | 'coverage' | 'natural_bms' | 'stretch' | 'rubric_drift';
 
 interface FilterState {
   modes: Set<Mode>;
@@ -121,6 +121,8 @@ export const useFilters = create<FilterState>((set, get) => ({
         return bmsGradientColor(cell.natural_bms_score ?? cell.bms_score);
       case 'stretch':
         return STRETCH_COLORS[cell.stretch_direction ?? 'aligned'];
+      case 'rubric_drift':
+        return driftGradientColor(cell.rubric_drift_magnitude ?? 0);
       case 'mode':
       default:
         return MODE_COLORS[cell.mode];

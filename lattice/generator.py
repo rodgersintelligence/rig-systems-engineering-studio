@@ -87,6 +87,18 @@ def _implementation_status(mode: BuildMode) -> ImplementationStatus:
     return ImplementationStatus.NOT_STARTED
 
 
+def _altitude_drift(altitude: Altitude) -> dict[str, int]:
+    """Read live rubric drift for an altitude (or {} when private runtime offline)."""
+    import os
+    if os.environ.get("RIG_DISABLE_RUBRIC_TUNER", "0") == "1":
+        return {}
+    try:
+        from rig.runtime import get_altitude_drift  # type: ignore
+        return get_altitude_drift(altitude.value)
+    except Exception:
+        return {}
+
+
 def build_card(altitude: Altitude, diamond: Diamond, mode: BuildMode, step: IQRSQPI) -> BuildCard:
     raw, adj_f, adj_v, adj_a, score = coordinate_bms(altitude, mode)
 
@@ -100,6 +112,10 @@ def build_card(altitude: Altitude, diamond: Diamond, mode: BuildMode, step: IQRS
 
     sem = STEP_SEMANTICS[(diamond, step)]
     alt_sem = ALTITUDE_SEMANTICS[altitude]
+
+    # Rubric drift (from rubric tuner — 0 when offline).
+    drift_per = _altitude_drift(altitude)
+    drift_magnitude = sum(abs(v) for v in drift_per.values())
 
     refs = EngineRefs(diamond_sigma_target=dv_engines.rung_for_diamond_mode(diamond))
     if step == IQRSQPI.RESEARCH:
@@ -135,6 +151,8 @@ def build_card(altitude: Altitude, diamond: Diamond, mode: BuildMode, step: IQRS
         criteria=nat["criteria"],
         altitude_name=alt_sem["name"],
         altitude_purpose=alt_sem["purpose"],
+        rubric_drift_magnitude=drift_magnitude,
+        rubric_drift_per_criterion=drift_per,
         diamond_step_semantic=f"{sem['name']}: {sem['description']}",
         archetype=archetype,
         implementation_status=_implementation_status(mode),
@@ -200,6 +218,7 @@ def write_index(cards: list[BuildCard], out_dir: Path) -> Path:
             "natural_mode": c.natural_mode,
             "bms_alignment": c.bms_alignment,
             "stretch_direction": c.stretch_direction,
+            "rubric_drift_magnitude": c.rubric_drift_magnitude,
             "confidence_band": c.confidence_band,
             "archetype": c.archetype,
             "implementation_status": c.implementation_status.value,

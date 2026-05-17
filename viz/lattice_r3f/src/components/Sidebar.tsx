@@ -48,6 +48,11 @@ export function Sidebar({ cells }: Props) {
           onClick={() => f.setColorMode('stretch')}
           label="Stretch"
         />
+        <Toggle
+          active={f.colorMode === 'rubric_drift'}
+          onClick={() => f.setColorMode('rubric_drift')}
+          label="Rubric drift"
+        />
       </Section>
 
       <Section title="Mode">

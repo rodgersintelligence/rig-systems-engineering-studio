@@ -20,6 +20,14 @@ const NATURAL_BMS_RANGES: { label: string; color: string }[] = [
   { label: '< 0.25 → A4 LLM_AGENT_FREE', color: '#ef4444' },
 ];
 
+const DRIFT_RANGES: { label: string; color: string }[] = [
+  { label: 'no drift (rubric unchanged)', color: '#525252' },
+  { label: '|Σ| ≤ 2 (light drift)', color: '#a78bfa' },
+  { label: '|Σ| ≤ 5 (medium drift)', color: '#a855f7' },
+  { label: '|Σ| ≤ 10 (deep drift)', color: '#9333ea' },
+  { label: '|Σ| > 10 (extreme — investigate)', color: '#7e22ce' },
+];
+
 export function Legend() {
   const colorMode = useFilters((s) => s.colorMode);
 
@@ -41,6 +49,9 @@ export function Legend() {
       color: STRETCH_COLORS[s],
       label: STRETCH_LABELS[s],
     }));
+  } else if (colorMode === 'rubric_drift') {
+    title = 'Rubric drift (learned from outcomes)';
+    swatches = DRIFT_RANGES;
   }
 
   return (

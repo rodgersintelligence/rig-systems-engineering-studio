@@ -179,6 +179,10 @@ class BuildCard(BaseModel):
     altitude_name: str = ""             # Artifacts | Tasks | ... | Vision
     altitude_purpose: str = ""
 
+    # Rubric drift (sum of |delta| across criteria, learned from outcomes)
+    rubric_drift_magnitude: int = 0
+    rubric_drift_per_criterion: dict[str, int] = Field(default_factory=dict)
+
     # Semantics (Y-axis)
     diamond_step_semantic: str = ""
 
