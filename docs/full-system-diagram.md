@@ -133,39 +133,65 @@ graph TB
     CFG --> SCH
 ```
 
-## Layer 5 — Tier → mesh routing
+## Layer 5 — Multi-node fleet routing
+
+The mesh client routes each call to the **best-fit node** in Mike's Tailscale
+rig fleet. `rig.runtime.fleet.pick_node(tier, model)` picks based on:
+
+1. Nodes that actually have the requested model loaded (probed every 60s)
+2. Nodes that prefer this tier in their `preferred_for` table
+3. Round-robin among viable candidates (also rotates across `:N` parallel
+   instances on each node for the backbone model)
 
 ```mermaid
 graph LR
-    subgraph TIERS [Archetype tier → model]
-        T1[a1_fast / a1_shim<br/>60-word cap]
-        T2[a2_synth / a2_judge]
-        T3[a3_agent / a3_red_team]
-        T4[a4_strategic / a4_critic]
-        TC[coding]
-        TE[embedding]
+    subgraph TIERS [Archetype tiers]
+        T_A1[a1_fast / a1_shim]
+        T_A2[a2_synth / a2_judge]
+        T_A3[a3_agent / a3_red_team]
+        T_A4[a4_strategic / a4_critic]
     end
 
-    BACKBONE[qwen/qwen3.6-27b<br/>×8 round-robin instances<br/>27B-param, 8 mesh peers]
-    EMB[text-embedding-nomic-embed-text-v1.5]
+    subgraph FLEET [Tailscale rig fleet]
+        N28[rig-28gb-mbp · 28GB<br/>100.103.237.24<br/>qwen3-8b]
+        N36[rig-36gb-mac-studio-1 · 36GB<br/>100.89.143.27<br/>qwen3.6-27b ×8 + qwen3-14b + qwen3-8b + gemma-4-31b]
+        N48[rig-48gb-mbp · 48GB<br/>100.76.209.22<br/>qwen3.6-27b ×8 + qwen3-14b + gemma-4-31b + glm-5.1]
+        N96[rig-96gb-mac-studio-1 · 96GB<br/>100.102.142.84<br/>qwen3.5-35b-a3b + hermes-4-70b + qwen3-coder-30b]
+        N256[rig-256gb-mac-studio · 256GB<br/>100.91.39.12<br/>qwen3.6-27b ×8 + hermes-4-70b + hermes-4-405b + gpt-oss-120b]
+        NBW[blackwell · GPU<br/>100.67.126.117<br/>service not yet exposed]
+    end
 
-    T1 --> BACKBONE
-    T2 --> BACKBONE
-    T3 --> BACKBONE
-    T4 --> BACKBONE
-    TC --> BACKBONE
-    TE --> EMB
+    T_A1 --> N28
+    T_A1 --> N36
+    T_A1 --> N48
+    T_A2 --> N36
+    T_A2 --> N48
+    T_A2 --> N96
+    T_A3 --> N96
+    T_A3 --> N256
+    T_A4 --> N256
+    T_A4 -.future.-> NBW
 
-    BACKBONE -.fallback.-> LITELLM[LiteLLM :4000]
-    BACKBONE -.fallback.-> ANTHROPIC[Anthropic API]
-    BACKBONE -.last resort.-> STUB[Deterministic stub<br/>tests + offline]
+    N28 -.fallback.-> N48
+    N36 -.fallback.-> N48
+    N96 -.fallback.-> N256
+
+    FLEET -.last resort.-> ANTHROPIC[Anthropic API]
+    FLEET -.last resort.-> STUB[Deterministic stub<br/>tests + offline]
 ```
 
-When the backbone (qwen3.6-27b) round-robin hits a transient load-failure on a
-peer node, the client retries on a different mesh instance up to 3 times. The
-LM Studio mesh is currently the only fully-loaded tier; higher-tier models
-(Hermes-4-405b, gpt-oss-120b, etc.) are registered but not preloaded, so the
-client transparently falls back to the backbone for those tiers.
+Live fleet status as of 2026-05-16:
+
+| Node | Tailscale IP | RAM | Models | Tier preference |
+|---|---|---|---|---|
+| `rig-256gb-mac-studio` | 100.91.39.12 | 256 GB | 18 (qwen3.6-27b ×8, hermes-4-{70b,405b}, gpt-oss-120b, gemma-4-31b, …) | a4_strategic, a4_critic, a3_agent |
+| `rig-96gb-mac-studio-1` | 100.102.142.84 | 96 GB | 8 (qwen3.5-35b-a3b, hermes-4-70b, qwen3-coder-30b, …) | a3_agent, a3_red_team, a2_synth |
+| `rig-48gb-mbp` | 100.76.209.22 | 48 GB | 18 (qwen3.6-27b ×8, qwen3-14b, gemma-4-31b, glm-5.1, …) | a2_synth, a2_judge, coding |
+| `rig-36gb-mac-studio-1` | 100.89.143.27 | 36 GB | 18 (qwen3.6-27b ×8, qwen3-14b, qwen3-8b, …) | a2_synth, a2_judge, a1_shim |
+| `rig-28gb-mbp` | 100.103.237.24 | 28 GB | 2 (qwen3-8b, nomic-embed) | a1_fast, a1_shim, embedding |
+| `blackwell` | 100.67.126.117 | (GPU) | — | (no inference service yet) |
+| `nas94f2ae` | 100.64.83.55 | NAS | — | storage/UI |
+| `rodgemd1-vm` | 100.89.150.120 | VM | — | services |
 
 ## Layer 6 — Cascade: A4 reshapes lower altitudes
 

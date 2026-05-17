@@ -70,19 +70,34 @@ Comprehensive table of everything shipped. Status as of 2026-05-16, post live-me
 | **FastAPI server** | `server.py` | HTML approval queue + healthz + audit + reviews endpoints | 130 |
 | **Package init** | `__init__.py` | re-exports all public API | 25 |
 
-## 5 · Mesh fleet (live now)
+## 5 · Mesh fleet (live now — full Tailscale rig)
 
-| Resource | URL/Path | Status | Notes |
-|---|---|---|---|
-| LM Studio | http://localhost:1234 | ✅ Live | OpenAI-compatible, 18 models loaded |
-| qwen/qwen3.6-27b | × 8 mesh instances (`:1`, `:2`..`:8`) | ✅ All responsive | Round-robin via MeshClient |
-| qwen/qwen3-14b · qwen3-8b | LM Studio registered | ⚠️ Not preloaded | Falls back to backbone |
-| nousresearch/hermes-4-70b · hermes-4-405b | LM Studio registered | ⚠️ Not preloaded | Falls back to backbone |
-| openai/gpt-oss-120b · gemma-4-31b · glm-5.1 · devstral-small-2507 · qwen3-coder-next | LM Studio registered | ⚠️ Not preloaded | Falls back to backbone |
-| text-embedding-nomic-embed-text-v1.5 | LM Studio | ✅ Live | Embedding tier |
-| LiteLLM | http://localhost:4000 | ⚠️ Running, no DB | Fallback only when configured |
-| Anthropic API | env: ANTHROPIC_API_KEY | ✅ Configured | Opt-in via `RIG_LIVE_LLM=1` |
-| EXO.app | 3 daemon procs | ✅ Background | Distributed inference layer |
+| Node | Tailscale IP | RAM | LM Studio | Ollama | Status | Tier preference |
+|---|---|---|---|---|---|---|
+| **rig-256gb-mac-studio** | 100.91.39.12 | 256 GB | :1234 ✅ 18 models | :11434 ✅ | a4 strategic backbone | a4_strategic, a4_critic, a3_agent |
+| **rig-96gb-mac-studio-1** | 100.102.142.84 | 96 GB | :1234 ✅ 8 models | :11434 ✅ | a3 agent backbone | a3_agent, a3_red_team, a2_synth |
+| **rig-48gb-mbp** | 100.76.209.22 | 48 GB | :1234 ✅ 18 models | :11434 ✅ | a2 synth backbone | a2_synth, a2_judge, coding |
+| **rig-36gb-mac-studio-1** | 100.89.143.27 | 36 GB | :1234 ✅ 18 models | :11434 ✅ | a1 shim node | a2_synth, a2_judge, a1_shim |
+| **rig-28gb-mbp** | 100.103.237.24 | 28 GB | :1234 ✅ 2 models | :11434 ✅ | fast tier | a1_fast, a1_shim, embedding |
+| **blackwell** | 100.67.126.117 | GPU | — | — | not yet exposed | future GPU strategic |
+| **nas94f2ae** | 100.64.83.55 | NAS | — | — | :8080/:3000 (UI) | storage |
+| **rodgemd1-vm** | 100.89.150.120 | VM | — | — | latency ~300ms | services candidate |
+| **iphone182** | 100.77.61.95 | iPhone | — | — | mobile peer | — |
+
+**Backbone**: `qwen/qwen3.6-27b` loaded on **4 of 5 Mac nodes** with **8 peer instances each** = 32 effective parallel slots when fully utilized. The fleet router round-robins both across nodes and within a node's `:N` instances.
+
+**Unique models in fleet** (deduplicated):
+- qwen3-8b (4 nodes — fastest)
+- qwen3-14b (2 nodes)
+- qwen3.6-27b ×8 instances (4 nodes — backbone)
+- qwen3.5-35b-a3b (96GB only)
+- qwen3-coder-30b · qwen3-coder-next (coding)
+- google/gemma-4-31b · glm-5.1 · mistralai/devstral-small-2507 (3 nodes)
+- nvidia/nemotron-3-nano-omni (96GB only — multimodal)
+- nousresearch/hermes-4-70b (96GB + 256GB)
+- openai/gpt-oss-120b (256GB only — needs more memory to load)
+- hermes-4-405b (256GB only — 210GB load weight)
+- text-embedding-nomic-embed-text-v1.5 (all 5 nodes)
 
 ## 6 · Archetype implementation status
 
