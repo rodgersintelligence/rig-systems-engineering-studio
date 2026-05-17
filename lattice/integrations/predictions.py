@@ -87,39 +87,60 @@ def miro_fish_score(text: str, persona: dict[str, Any] | None = None) -> dict[st
 
 
 def miro_shark_predict(seed: str, horizon: str = "30d") -> dict[str, Any]:
-    """Calibrated outcome probability for `seed` over `horizon`.
+    """Calibrated outcome probability via the rig.runtime.MiroSharkForecaster.
 
-    Stub returns a uniform-prior baseline so the Quality step can wire end-to-end
-    before MiroShark runtime is bridged. The miroshark-src/ app is the production
-    backend; this adapter is the call boundary.
+    Falls back to a uniform-prior dict if the runtime isn't reachable.
     """
-    return {
-        "seed_hash": hash(seed) & 0xFFFFFFFF,
-        "horizon": horizon,
-        "probability": 0.5,
-        "confidence": 0.0,
-        "brier_baseline": None,
-        "implementation": "stub-uniform-prior",
-        "next_step": "Bridge to miroshark-src/ runtime via HTTP or subprocess.",
-    }
+    try:
+        import sys
+        from pathlib import Path
+        rig_private = Path(__file__).resolve().parents[3] / "rig-systems-engineering-private"
+        if str(rig_private) not in sys.path:
+            sys.path.insert(0, str(rig_private))
+        from rig.runtime import miroshark  # type: ignore
+        result = miroshark.predict(seed, horizon=horizon)
+        baseline = miroshark.brier_baseline(seed_hash=result.seed_hash)
+        out = result.to_dict()
+        out["brier_baseline"] = baseline
+        return out
+    except Exception as ex:
+        return {
+            "seed_hash": hash(seed) & 0xFFFFFFFF,
+            "horizon": horizon,
+            "probability": 0.5,
+            "confidence": 0.0,
+            "brier_baseline": None,
+            "implementation": "stub-uniform-prior",
+            "error": str(ex),
+        }
 
 
 def milkyway_forecast(seed: str, horizon: str = "90d") -> dict[str, Any]:
-    """Long-horizon ensemble forecast.
+    """Long-horizon ensemble forecast via rig.runtime.MilkyWayForecaster.
 
-    Stub. See docs/protocols/milkyway-mirofish-build-book.md for the full
-    protocol. The Quality step calls this for >30-day predictions where
-    MiroShark alone is insufficient.
+    Ensemble: linear trend + recency-weighted + contrarian (median voted).
     """
-    return {
-        "seed_hash": hash(seed) & 0xFFFFFFFF,
-        "horizon": horizon,
-        "ensemble_size": 0,
-        "median_outcome": None,
-        "confidence_interval": None,
-        "implementation": "stub",
-        "next_step": "Implement per docs/protocols/milkyway-mirofish-build-book.md.",
-    }
+    try:
+        import sys
+        from pathlib import Path
+        rig_private = Path(__file__).resolve().parents[3] / "rig-systems-engineering-private"
+        if str(rig_private) not in sys.path:
+            sys.path.insert(0, str(rig_private))
+        from rig.runtime import milkyway  # type: ignore
+        result = milkyway.predict(seed, horizon=horizon)
+        out = result.to_dict()
+        out["implementation"] = "milkyway.v1.ensemble"
+        return out
+    except Exception as ex:
+        return {
+            "seed_hash": hash(seed) & 0xFFFFFFFF,
+            "horizon": horizon,
+            "ensemble_size": 0,
+            "median_outcome": None,
+            "confidence_interval": None,
+            "implementation": "stub",
+            "error": str(ex),
+        }
 
 
 def predictive_swarm(
