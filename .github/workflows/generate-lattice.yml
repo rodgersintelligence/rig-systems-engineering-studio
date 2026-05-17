@@ -6,10 +6,15 @@ on:
     paths:
       - "lattice/**"
       - "cards-design/**"
+      - "tests/**"
+      - ".github/workflows/generate-lattice.yml"
   pull_request:
     paths:
       - "lattice/**"
       - "cards-design/**"
+      - "tests/**"
+      - ".github/workflows/generate-lattice.yml"
+  workflow_dispatch:
 
 jobs:
   generate:
