@@ -196,6 +196,38 @@ Five edges from private repo commit 43d0bbe (`codex/openclaw-rig-lattice-mvp`).
 
 ---
 
+## 14 · RGI Integration — Move 10 (2026-05-18)
+
+Four new components wire the public R3F viewer to the private runtime server at `http://localhost:8780`.
+
+### New components
+
+| File | Purpose |
+|---|---|
+| `viz/lattice_r3f/src/store/memory.ts` | Zustand store: semantic recall cache, /memory/status polling, soft-fail to `enabled=false` |
+| `viz/lattice_r3f/src/components/MemoryHoverPanel.tsx` | Cursor-anchored hover panel — top-3 memories per cell coord after 400ms hover dwell |
+| `viz/lattice_r3f/src/components/RGIStatusTile.tsx` | Top-right floating tile — overall health dot, sensor count, signals today; expands to 11 checks + /rgi/sla link |
+| `viz/lattice_r3f/src/components/V3PipelineMini.tsx` | 6-stage horizontal pipeline (Capture→Process→Create→Engage→Convert→Autonomize) pulsing on SSE events |
+
+### Endpoints consumed
+
+| Endpoint | Consumer |
+|---|---|
+| `GET /memory/recall?coord=…&k=3` | MemoryHoverPanel via useMemory.recall() |
+| `GET /memory/status` | useMemory.refreshStatus() — backend mode, row count, last embed ts |
+| `GET /rgi/health` | RGIStatusTile — overall + 11 named checks |
+| `GET /phronema/proactive/status` | RGIStatusTile — sensor list, signals today, compiler_fired |
+
+### Notes
+
+- All three components soft-fail to an "offline" state if the server is not reachable.
+- `MemoryHoverPanel` is rendered via `createPortal` into `document.body` to avoid re-rendering the 588-cell `InstancedMesh`.
+- Hover detection on `Lattice` is additive only (new `onCellHover` prop; zero changes to geometry or render loop).
+- New env vars documented in `viz/lattice_r3f/.env.example`: `VITE_RIG_RUNTIME_URL`, `VITE_RIG_MEMORY_ENABLED`.
+- Build: 0 TS errors, bundle unchanged at ~32 kB app chunk + existing Three/R3F chunks.
+
+---
+
 ## 12 · What's no longer a stub
 
 | Was | Now |

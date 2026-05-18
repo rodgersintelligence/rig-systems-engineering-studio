@@ -1,17 +1,37 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Axes } from './components/Axes';
 import { CellPanel } from './components/CellPanel';
 import { EventTicker } from './components/EventTicker';
 import { Lattice } from './components/Lattice';
+import type { HoveredCellInfo } from './components/Lattice';
 import { Legend } from './components/Legend';
+import { MemoryHoverPanel } from './components/MemoryHoverPanel';
+import { RGIStatusTile } from './components/RGIStatusTile';
 import { Sidebar } from './components/Sidebar';
+import { V3PipelineMini } from './components/V3PipelineMini';
 import { LatticeCell } from './types/lattice';
 import { gridCenter } from './lib/positions';
 import { useEvents } from './store/events';
+import { useMemory } from './store/memory';
 
 const INDEX_URL = `${import.meta.env.BASE_URL}lattice_index.json`;
+
+// Runtime server base URL for memory + health endpoints.
+// Default: port 8780. Override via VITE_RIG_RUNTIME_URL build var or
+// ?runtime=http://host:port query param.
+function resolveRuntimeEndpoint(): string {
+  const url = new URL(window.location.href);
+  const q = url.searchParams.get('runtime');
+  if (q) return q;
+  const env = (import.meta as any).env?.VITE_RIG_RUNTIME_URL;
+  if (env) return env;
+  return 'http://localhost:8780';
+}
+
+const MEMORY_ENABLED = (import.meta as any).env?.VITE_RIG_MEMORY_ENABLED !== 'false';
 
 export default function App() {
   const [cells, setCells] = useState<LatticeCell[]>([]);
@@ -20,6 +40,15 @@ export default function App() {
   const disconnect = useEvents((s) => s.disconnect);
   const connected = useEvents((s) => s.connected);
   const endpoint = useEvents((s) => s.endpoint);
+
+  const memoryConnect = useMemory((s) => s.connect);
+
+  // Hovered cell for memory panel — tracked outside the Canvas to avoid
+  // causing re-renders on the 588-cell InstancedMesh.
+  const [hoveredCell, setHoveredCell] = useState<HoveredCellInfo | null>(null);
+  const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const runtimeEndpoint = resolveRuntimeEndpoint();
 
   useEffect(() => {
     const url = `${INDEX_URL}?v=${(import.meta as any).env?.VITE_BUILD_ID ?? Date.now()}`;
@@ -40,6 +69,25 @@ export default function App() {
     connect();
     return () => disconnect();
   }, [connect, disconnect]);
+
+  useEffect(() => {
+    // Move 10 — connect memory store on mount if enabled.
+    if (MEMORY_ENABLED) {
+      memoryConnect();
+    }
+  }, [memoryConnect]);
+
+  const handleCellHover = (info: HoveredCellInfo | null) => {
+    if (hoverClearTimer.current) {
+      clearTimeout(hoverClearTimer.current);
+      hoverClearTimer.current = null;
+    }
+    setHoveredCell(info);
+  };
+
+  const handlePanelClose = () => {
+    setHoveredCell(null);
+  };
 
   if (error) {
     return <ErrorScreen error={error} />;
@@ -62,7 +110,10 @@ export default function App() {
         <directionalLight position={[10, 15, 10]} intensity={0.8} />
         <directionalLight position={[-10, -5, -10]} intensity={0.3} />
 
-        <Lattice cells={cells} />
+        <Lattice
+          cells={cells}
+          onCellHover={MEMORY_ENABLED ? handleCellHover : undefined}
+        />
         <Axes />
 
         <OrbitControls
@@ -78,6 +129,28 @@ export default function App() {
       <CellPanel cells={cells} />
       <Legend />
       <EventTicker />
+
+      {/* Move 10 — top-right status cluster: RGI health + V3 pipeline */}
+      <div style={statusCluster}>
+        <RGIStatusTile endpoint={runtimeEndpoint} />
+        <V3PipelineMini />
+      </div>
+
+      {/* Move 10 — memory hover panel rendered as a portal so it floats above Canvas */}
+      {MEMORY_ENABLED && hoveredCell &&
+        createPortal(
+          <MemoryHoverPanel
+            coord={hoveredCell.cell.coordinate_id}
+            cellId={hoveredCell.cell.cell_id}
+            altitudeName={hoveredCell.cell.altitude_name}
+            mouseX={hoveredCell.mouseX}
+            mouseY={hoveredCell.mouseY}
+            onClose={handlePanelClose}
+          />,
+          document.body,
+        )
+      }
+
       {/* Phase 9 — inbox link: only render when SSE runtime is connected */}
       {connected && endpoint && (
         <a
@@ -95,7 +168,7 @@ export default function App() {
 
 function LoadingScreen() {
   return (
-    <div style={center}>
+    <div style={centerStyle}>
       <div>Loading 588 cells…</div>
     </div>
   );
@@ -103,7 +176,7 @@ function LoadingScreen() {
 
 function ErrorScreen({ error }: { error: string }) {
   return (
-    <div style={center}>
+    <div style={centerStyle}>
       <div>
         <div style={{ color: '#ef4444', marginBottom: 8 }}>Failed to load lattice_index.json</div>
         <div style={{ fontSize: 12, color: '#94a3b8' }}>{error}</div>
@@ -132,7 +205,18 @@ const inboxLink: React.CSSProperties = {
   letterSpacing: '0.02em',
 };
 
-const center: React.CSSProperties = {
+const statusCluster: React.CSSProperties = {
+  position: 'absolute',
+  top: 16,
+  right: 16,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  zIndex: 20,
+  width: 240,
+};
+
+const centerStyle: React.CSSProperties = {
   width: '100%',
   height: '100%',
   display: 'flex',

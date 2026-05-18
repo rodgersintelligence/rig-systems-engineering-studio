@@ -59,6 +59,14 @@ function resolveEndpoint(explicit?: string): string {
   return 'http://localhost:8765';
 }
 
+/** Return the resolved base URL for the runtime server.
+ *  Memory and status stores call this so all components share the same base. */
+export function getEndpoint(): string {
+  const stored = useEvents.getState().endpoint;
+  if (stored) return stored;
+  return resolveEndpoint();
+}
+
 export const useEvents = create<EventsState>((set, get) => ({
   connected: false,
   endpoint: '',

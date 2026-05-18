@@ -6,19 +6,29 @@ import { cellGridPosition } from '../lib/positions';
 import { useFilters } from '../store/filters';
 import { useEvents } from '../store/events';
 
+export interface HoveredCellInfo {
+  cell: LatticeCell;
+  mouseX: number;
+  mouseY: number;
+}
+
 interface Props {
   cells: LatticeCell[];
+  onCellHover?: (info: HoveredCellInfo | null) => void;
 }
 
 const SCALE_MIN = 0.2;
 const SCALE_MAX = 0.85;
 
-export function Lattice({ cells }: Props) {
+export function Lattice({ cells, onCellHover }: Props) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const isCellVisible = useFilters((s) => s.isCellVisible);
   const colorFor = useFilters((s) => s.colorFor);
   const selectCell = useFilters((s) => s.selectCell);
   const filters = useFilters();
+
+  // Hover debounce: fire onCellHover after 400ms of sustained hover.
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const geo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({
@@ -100,11 +110,35 @@ export function Lattice({ cells }: Props) {
     if (id) selectCell(id);
   };
 
+  const handlePointerOver = (e: any) => {
+    e.stopPropagation();
+    if (!onCellHover) return;
+    const cell = cells[e.instanceId];
+    if (!cell) return;
+    const mx = e.nativeEvent?.clientX ?? 0;
+    const my = e.nativeEvent?.clientY ?? 0;
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      onCellHover({ cell, mouseX: mx, mouseY: my });
+    }, 400);
+  };
+
+  const handlePointerOut = (e: any) => {
+    e.stopPropagation();
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    // Don't immediately clear the hover panel — let App decide via a delay.
+  };
+
   return (
     <instancedMesh
       ref={meshRef}
       args={[geo, mat, cells.length]}
       onClick={handleClick}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
     />
   );
 }
